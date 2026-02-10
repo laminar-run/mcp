@@ -275,6 +275,13 @@ const HTML = `<!DOCTYPE html>
           </button>
         </div>
       </div>
+      <div class="field">
+        <label>Region</label>
+        <div class="scope-row" style="margin-top:0">
+          <label><input type="radio" name="region" value="api.laminar.run" checked /> US</label>
+          <label><input type="radio" name="region" value="ca.api.laminar.run" /> Canada</label>
+        </div>
+      </div>
       <div class="scope-row">
         <label><input type="radio" name="scope" value="global" checked /> Global</label>
         <label><input type="radio" name="scope" value="project" /> Project</label>
@@ -282,6 +289,11 @@ const HTML = `<!DOCTYPE html>
       <button type="submit" class="btn" id="btn-login">Sign in</button>
     </form>
     <div class="error-msg" id="login-error"></div>
+    <div id="session-bar" style="display:none; margin-top:16px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
+      <span style="color:var(--muted)">Existing session:</span>
+      <strong id="session-region"></strong> &middot; expires <span id="session-expires"></span>
+      <button onclick="doLogout()" style="float:right; background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; font-weight:500;">Sign out</button>
+    </div>
   </div>
 
   <!-- Done -->
@@ -311,6 +323,28 @@ function showError(msg) {
   el.classList.add('show');
 }
 
+// Check for existing session on load
+(async () => {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    if (data.hasSession) {
+      const bar = document.getElementById('session-bar');
+      bar.style.display = 'block';
+      document.getElementById('session-region').textContent = data.region || 'US';
+      const exp = new Date(data.expiresAt);
+      document.getElementById('session-expires').textContent = exp.toLocaleString();
+    }
+  } catch {}
+})();
+
+async function doLogout() {
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+    document.getElementById('session-bar').style.display = 'none';
+  } catch {}
+}
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const el = document.getElementById('login-error');
@@ -319,6 +353,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const scope = document.querySelector('input[name="scope"]:checked').value;
+  const region = document.querySelector('input[name="region"]:checked').value;
 
   if (!email || !password) return showError('Email and password required.');
 
@@ -330,7 +365,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const res = await fetch('/api/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, scope }),
+      body: JSON.stringify({ email, password, scope, region }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Sign in failed');
@@ -369,12 +404,56 @@ async function startSetup() {
         return res.end(HTML);
       }
 
+      // ── Session status ──
+      if (url.pathname === "/api/status" && req.method === "GET") {
+        if (fs.existsSync(TOKEN_PATH)) {
+          try {
+            const tokens = JSON.parse(fs.readFileSync(TOKEN_PATH, "utf-8"));
+            const apiBase: string = tokens.api_base || "https://api.laminar.run";
+            const region = apiBase.includes("ca.api") ? "Canada" : "US";
+            return send(res, 200, {
+              hasSession: true,
+              region,
+              apiBase,
+              expiresAt: tokens.expires_at,
+            });
+          } catch {}
+        }
+        return send(res, 200, { hasSession: false });
+      }
+
+      // ── Logout: clear tokens + remove from Cursor config ──
+      if (url.pathname === "/api/logout" && req.method === "POST") {
+        if (fs.existsSync(TOKEN_PATH)) fs.unlinkSync(TOKEN_PATH);
+
+        // Also remove laminar from Cursor mcp.json
+        for (const base of [
+          path.join(os.homedir(), ".cursor"),
+          path.join(process.cwd(), ".cursor"),
+        ]) {
+          const mcpPath = path.join(base, "mcp.json");
+          if (fs.existsSync(mcpPath)) {
+            try {
+              const cfg = JSON.parse(fs.readFileSync(mcpPath, "utf-8"));
+              if (cfg.mcpServers?.laminar) {
+                delete cfg.mcpServers.laminar;
+                fs.writeFileSync(mcpPath, JSON.stringify(cfg, null, 2) + "\n");
+              }
+            } catch {}
+          }
+        }
+
+        console.log("Session cleared.");
+        return send(res, 200, { ok: true });
+      }
+
       // Single endpoint: sign in → store tokens → write Cursor config
       if (url.pathname === "/api/connect" && req.method === "POST") {
-        const { email, password, scope } = await jsonBody(req);
+        const { email, password, scope, region } = await jsonBody(req);
+        const apiBase = `https://${region || "api.laminar.run"}`;
 
         // 1. Sign in
-        const loginRes = await fetch("https://api.laminar.run/auth/signin", {
+        const loginRes = await fetch(`${apiBase}/auth/signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: email, password }),
@@ -402,6 +481,7 @@ async function startSetup() {
               access_token: loginData.access_token,
               refresh_token: loginData.refresh_token || null,
               expires_at: Date.now() + loginData.expires_in * 1000,
+              api_base: apiBase,
             },
             null,
             2

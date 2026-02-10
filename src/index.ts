@@ -23,6 +23,12 @@ interface StoredTokens {
   access_token: string;
   refresh_token: string | null;
   expires_at: number; // epoch ms
+  api_base?: string;
+}
+
+function getApiBase(): string {
+  const stored = readStoredTokens();
+  return stored?.api_base || process.env.LAMINAR_API_BASE || "https://api.laminar.run";
 }
 
 // ─── Token management ────────────────────────────────────────
@@ -47,8 +53,9 @@ function writeStoredTokens(tokens: StoredTokens) {
 async function refreshAccessToken(
   refreshToken: string
 ): Promise<StoredTokens | null> {
+  const base = getApiBase();
   try {
-    const res = await fetch("https://api.laminar.run/auth/refresh", {
+    const res = await fetch(`${base}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
@@ -63,6 +70,7 @@ async function refreshAccessToken(
       access_token: data.access_token,
       refresh_token: data.refresh_token || refreshToken,
       expires_at: Date.now() + data.expires_in * 1000,
+      api_base: base,
     };
   } catch {
     return null;
@@ -98,18 +106,19 @@ async function getValidToken(): Promise<string> {
 
 // ─── Resolve auth ────────────────────────────────────────────
 // Priority: LAMINAR_API_KEY > env token > stored tokens from setup
-async function resolveAuth(): Promise<LaminarAuth> {
+async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string }> {
   const apiKey = process.env.LAMINAR_API_KEY;
   const accessToken = process.env.LAMINAR_ACCESS_TOKEN;
+  const baseUrl = getApiBase();
 
-  if (apiKey) return { type: "apiKey", token: apiKey };
-  if (accessToken) return { type: "bearer", token: accessToken };
+  if (apiKey) return { auth: { type: "apiKey", token: apiKey }, baseUrl };
+  if (accessToken) return { auth: { type: "bearer", token: accessToken }, baseUrl };
 
   // Try stored tokens from `npm run setup`
   const stored = readStoredTokens();
   if (stored) {
     const token = await getValidToken();
-    return { type: "bearer", token };
+    return { auth: { type: "bearer", token }, baseUrl };
   }
 
   console.error(
@@ -123,22 +132,22 @@ let client: LaminarClient;
 // Auto-refresh timer
 function scheduleTokenRefresh() {
   const tokens = readStoredTokens();
-  if (!tokens?.refresh_token) return; // no refresh token, nothing to schedule
+  if (!tokens?.refresh_token) return;
 
   const msUntilRefresh = Math.max(
     tokens.expires_at - REFRESH_BUFFER_MS - Date.now(),
-    60_000 // at least 1 min
+    60_000
   );
 
   setTimeout(async () => {
     try {
       const token = await getValidToken();
-      client = new LaminarClient({ type: "bearer", token });
+      client = new LaminarClient({ type: "bearer", token }, getApiBase());
       console.error("Token auto-refreshed, client updated.");
     } catch (e: any) {
       console.error("Auto-refresh failed:", e.message);
     }
-    scheduleTokenRefresh(); // re-schedule
+    scheduleTokenRefresh();
   }, msUntilRefresh);
 }
 
@@ -1052,7 +1061,8 @@ Analyze the execution, identify failures, explain root causes, and suggest speci
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 async function main() {
-  client = new LaminarClient(await resolveAuth());
+  const { auth, baseUrl } = await resolveAuth();
+  client = new LaminarClient(auth, baseUrl);
   scheduleTokenRefresh();
   const transport = new StdioServerTransport();
   await server.connect(transport);

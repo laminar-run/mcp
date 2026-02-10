@@ -3,7 +3,7 @@
  * Wraps the Laminar REST API for use by the MCP server.
  */
 
-const BASE_URL = "https://api.laminar.run";
+const DEFAULT_BASE_URL = "https://api.laminar.run";
 
 export interface LaminarAuth {
   type: "bearer" | "apiKey";
@@ -12,9 +12,11 @@ export interface LaminarAuth {
 
 export class LaminarClient {
   private auth: LaminarAuth;
+  private baseUrl: string;
 
-  constructor(auth: LaminarAuth) {
+  constructor(auth: LaminarAuth, baseUrl?: string) {
     this.auth = auth;
+    this.baseUrl = baseUrl || DEFAULT_BASE_URL;
   }
 
   private headers(extra?: Record<string, string>): Record<string, string> {
@@ -36,7 +38,7 @@ export class LaminarClient {
     body?: unknown,
     queryParams?: Record<string, string | number | boolean | undefined>
   ): Promise<T> {
-    let url = `${BASE_URL}${path}`;
+    let url = `${this.baseUrl}${path}`;
     if (queryParams) {
       const params = new URLSearchParams();
       for (const [k, v] of Object.entries(queryParams)) {
