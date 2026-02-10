@@ -1,0 +1,30 @@
+{
+  "name": "@laminar/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Laminar - bring your Laminar workspace into Cursor and Claude Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "laminar-mcp": "dist/index.js",
+    "laminar-mcp-setup": "dist/setup.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "setup": "node dist/setup.js",
+    "prepare": "npm run build"
+  },
+  "keywords": ["mcp", "laminar", "cursor", "claude", "ai", "workflow", "automation"],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
