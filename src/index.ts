@@ -834,6 +834,268 @@ server.tool(
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  WORKFLOW-CENTRIC TOOLS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+server.tool(
+  "preview_flow_changes",
+  "Show a diff of the current flow code vs your proposed changes BEFORE updating. Use this to review changes before pushing them to Laminar.",
+  {
+    flowId: z.number().describe("Flow ID to compare against"),
+    proposedProgram: z.string().describe("The new program code you want to set"),
+    proposedName: z.string().optional().describe("New name (if changing)"),
+    proposedDescription: z.string().optional().describe("New description (if changing)"),
+  },
+  async ({ flowId, proposedProgram, proposedName, proposedDescription }) => {
+    try {
+      const flow = await client.getFlow(flowId);
+      const currentCode = await client.readFlow(flowId);
+
+      const lines = [
+        `## Flow: ${flow.name} (ID: ${flowId})`,
+        `**Type:** ${flow.flowType} | **Language:** ${flow.language} | **Order:** ${flow.executionOrder}`,
+        "",
+      ];
+
+      if (proposedName && proposedName !== flow.name) {
+        lines.push(`### Name Change`);
+        lines.push(`- **Current:** ${flow.name}`);
+        lines.push(`- **Proposed:** ${proposedName}`);
+        lines.push("");
+      }
+
+      if (proposedDescription && proposedDescription !== flow.description) {
+        lines.push(`### Description Change`);
+        lines.push(`- **Current:** ${flow.description}`);
+        lines.push(`- **Proposed:** ${proposedDescription}`);
+        lines.push("");
+      }
+
+      lines.push(`### Current Code`);
+      lines.push("```");
+      lines.push(typeof currentCode === "string" ? currentCode : JSON.stringify(currentCode, null, 2));
+      lines.push("```");
+      lines.push("");
+      lines.push(`### Proposed Code`);
+      lines.push("```");
+      lines.push(proposedProgram);
+      lines.push("```");
+
+      return text(lines.join("\n"));
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "get_workflow_overview",
+  "Get a complete overview of a workflow: all steps with their code, recent executions, and config. Useful as context before making changes.",
+  {
+    workflowId: z.number().describe("Workflow ID"),
+    includeExecutions: z.number().optional().describe("Number of recent executions to include (default 3)"),
+  },
+  async ({ workflowId, includeExecutions = 3 }) => {
+    try {
+      const [workflow, flows, executions] = await Promise.all([
+        client.getWorkflow(workflowId),
+        client.getWorkflowFlows(workflowId),
+        client.listExecutions(workflowId, { size: includeExecutions }),
+      ]);
+
+      const flowList = Array.isArray(flows) ? flows : [];
+
+      // Fetch code for each flow
+      const flowsWithCode = await Promise.all(
+        flowList.map(async (f: any) => {
+          try {
+            const code = await client.readFlow(f.id);
+            return { ...f, code: typeof code === "string" ? code : JSON.stringify(code) };
+          } catch {
+            return { ...f, code: "(could not read)" };
+          }
+        })
+      );
+
+      return ok({
+        workflow,
+        steps: flowsWithCode.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          description: f.description,
+          executionOrder: f.executionOrder,
+          flowType: f.flowType,
+          language: f.language,
+          code: f.code,
+        })),
+        recentExecutions: executions?.content || executions || [],
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "get_execution_input",
+  "Get the input data from a specific execution, so you can reuse it to test the workflow again. Returns data.input from the first step.",
+  {
+    workflowId: z.number().describe("Workflow ID"),
+    executionId: z.number().describe("Execution ID to get input from"),
+  },
+  async ({ workflowId, executionId }) => {
+    try {
+      const exec = await client.getExecution(workflowId, executionId);
+      const flowRuns = exec?.flowRuns || [];
+      if (flowRuns.length === 0) return text("No flow runs found in this execution.");
+
+      // The first flow run's transformation/payload contains the input
+      const firstRun = flowRuns[0];
+      let input: any = null;
+
+      // Try the transformation field (contains data.input)
+      if (firstRun.transformation) {
+        try {
+          const t = typeof firstRun.transformation === "string"
+            ? JSON.parse(firstRun.transformation)
+            : firstRun.transformation;
+          input = t?.input || t;
+        } catch {
+          input = firstRun.transformation;
+        }
+      }
+
+      // Fallback to payload
+      if (!input && firstRun.payload) {
+        try {
+          input = typeof firstRun.payload === "string"
+            ? JSON.parse(firstRun.payload)
+            : firstRun.payload;
+        } catch {
+          input = firstRun.payload;
+        }
+      }
+
+      return ok({
+        executionId,
+        status: exec.status,
+        startedAt: exec.startedAt,
+        input,
+        hint: "Use this input with execute_workflow to re-test the workflow",
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "test_workflow_step",
+  "Execute a workflow up to (or from) a specific step for testing. Useful for isolating and debugging individual steps.",
+  {
+    workflowId: z.number().describe("Workflow ID"),
+    step: z.number().describe("Step number to test"),
+    mode: z.enum(["up_to", "single", "from"]).describe(
+      "up_to: run steps 1..N, single: run only step N, from: run steps N..end"
+    ),
+    body: z.any().optional().describe("Input data (JSON). Use get_execution_input to grab from a previous run."),
+    configurationId: z.number().optional().describe("Configuration store ID"),
+  },
+  async ({ workflowId, step, mode, body, configurationId }) => {
+    try {
+      const params: any = { configuration_id: configurationId };
+      if (mode === "up_to") {
+        params.end_at_step = step;
+      } else if (mode === "single") {
+        params.start_from_step = step;
+        params.end_at_step = step;
+      } else if (mode === "from") {
+        params.start_from_step = step;
+      }
+
+      const result = await client.executeWorkflow(workflowId, body, params);
+      return ok(result);
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "compare_flow_versions",
+  "Compare two versions of a flow side by side. Useful for reviewing what changed between versions.",
+  {
+    flowId: z.number().describe("Flow ID"),
+    versionA: z.number().optional().describe("First version ID (omit for current)"),
+    versionB: z.number().describe("Second version ID to compare against"),
+  },
+  async ({ flowId, versionA, versionB }) => {
+    try {
+      const [codeA, codeB] = await Promise.all([
+        versionA
+          ? client.readFlowVersion(flowId, versionA)
+          : client.readFlow(flowId),
+        client.readFlowVersion(flowId, versionB),
+      ]);
+
+      const labelA = versionA ? `Version ${versionA}` : "Current";
+      const labelB = `Version ${versionB}`;
+
+      return text(
+        `## ${labelA}\n\`\`\`\n${typeof codeA === "string" ? codeA : JSON.stringify(codeA, null, 2)}\n\`\`\`\n\n` +
+        `## ${labelB}\n\`\`\`\n${typeof codeB === "string" ? codeB : JSON.stringify(codeB, null, 2)}\n\`\`\``
+      );
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "diagnose_execution",
+  "Analyze a workflow execution to find failures. Returns only the failed steps with their errors, input data, and code for quick debugging.",
+  {
+    workflowId: z.number().describe("Workflow ID"),
+    executionId: z.number().describe("Execution ID to diagnose"),
+  },
+  async ({ workflowId, executionId }) => {
+    try {
+      const exec = await client.getExecution(workflowId, executionId);
+      const flowRuns = exec?.flowRuns || [];
+
+      const failures = flowRuns.filter(
+        (r: any) => r.status === "FAILED"
+      );
+
+      if (failures.length === 0) {
+        return text(
+          `Execution ${executionId} status: ${exec.status}. No failed steps found.`
+        );
+      }
+
+      const details = failures.map((r: any) => ({
+        stepName: r.flowName,
+        executionOrder: r.executionOrder,
+        status: r.status,
+        error: r.executionLog || r.response,
+        transformation: r.transformation,
+        program: r.program,
+      }));
+
+      return ok({
+        executionId,
+        overallStatus: exec.status,
+        failedStepCount: failures.length,
+        totalSteps: flowRuns.length,
+        failures: details,
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  PROMPTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

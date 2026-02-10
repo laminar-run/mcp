@@ -54,331 +54,216 @@ function send(res: http.ServerResponse, status: number, body: unknown) {
 
 // ─── HTML ────────────────────────────────────────────────────
 
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 98" width="48" height="40"><rect width="118" height="98" rx="10" ry="10" fill="#646ecb"/><g transform="translate(5.2,-4.6) scale(1.39)" fill="#fff"><path d="M27.4 59L10.6 38.5 27.4 17.7l4.6 3.7L18.2 38.4l13.8 16.9z"/><path d="M49.6 59l-4.6-3.7L58.9 38.3 45.1 21.4l4.6-3.7L66.5 38.3z"/></g></svg>`;
-
 const HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Laminar MCP Setup</title>
+<title>Laminar — Connect to Cursor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  :root {
-    --bg: linear-gradient(to bottom, #eef0ff, #ffffff);
-    --surface: #ffffff;
-    --border: #e2e5f1;
-    --text: #111111;
-    --muted: #6b7280;
-    --primary: hsl(231 48% 62%);
-    --primary-hover: hsl(246 50% 59%);
-    --primary-focus: hsl(228 43% 59%);
-    --danger: hsl(355 78% 60%);
-    --success: hsl(158 58% 45%);
-    --radius: 12px;
-    --shadow: 0 10px 40px rgba(100, 110, 203, 0.12);
+  *,:before,:after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --brand:100 110 203;
+    --primary:hsl(231 48% 62%);--primary-hover:hsl(240 65% 60%);--primary-active:hsl(228 43% 59%);
+    --success:hsl(158 58% 45%);--danger:hsl(355 78% 60%);
+    --bg:#f8f9fc;--surface:#fff;--surface-2:#f3f4f8;--border:#e2e5f1;
+    --text:#111;--text-secondary:#4b5563;--text-muted:#9ca3af;
+    --radius:10px;--font:'Inter',system-ui,sans-serif;--mono:'SF Mono','Fira Code','Cascadia Code',monospace;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: linear-gradient(to bottom, #111827, #1f2937);
-      --surface: #1f2937;
-      --border: #374151;
-      --text: #f3f4f6;
-      --muted: #9ca3af;
-      --shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-    }
+
+  html{font-size:14px}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased}
+
+  /* Layout */
+  .wrapper{width:100%;max-width:400px}
+  .logo-row{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+  .logo-row svg{flex-shrink:0}
+  .logo-row .wordmark{font-size:18px;font-weight:700;letter-spacing:-.3px}
+  .logo-row .badge{font-size:11px;font-weight:600;color:var(--primary);background:rgb(var(--brand)/.08);padding:2px 8px;border-radius:20px;margin-left:auto}
+
+  /* Card */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:12px}
+  .card h2{font-size:16px;font-weight:600;margin-bottom:4px}
+  .card p.desc{font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.45}
+
+  /* Fields */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:5px;letter-spacing:.01em}
+  .field .input-wrap{position:relative}
+  .field input[type="email"],.field input[type="password"],.field input[type="text"]{
+    width:100%;height:36px;padding:0 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;
+    color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border-color .15s,box-shadow .15s;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
+  .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgb(var(--brand)/.1)}
+  .field input[type="password"]{padding-right:36px}
+  .toggle-pw{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex}
+  .toggle-pw:hover{color:var(--text-secondary)}
+
+  /* Segmented control */
+  .seg{display:flex;background:var(--surface-2);border-radius:7px;padding:3px;gap:2px}
+  .seg label{flex:1;text-align:center;padding:6px 0;font-size:12px;font-weight:500;border-radius:5px;cursor:pointer;color:var(--text-secondary);transition:all .15s;user-select:none}
+  .seg input{display:none}
+  .seg input:checked+span{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .seg label span{display:block;padding:6px 0;border-radius:5px;transition:all .15s}
+
+  /* Buttons */
+  .btn-primary{
+    width:100%;height:36px;margin-top:6px;background:var(--primary);color:#fff;border:none;border-radius:7px;
+    font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:background .15s;
+    display:flex;align-items:center;justify-content:center;gap:6px;
   }
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 32px;
-    width: 100%;
-    max-width: 420px;
-    box-shadow: var(--shadow);
+  .btn-primary:hover{background:var(--primary-hover)}
+  .btn-primary:active{background:var(--primary-active)}
+  .btn-primary:disabled{opacity:.55;cursor:not-allowed}
+  .btn-ghost{
+    width:100%;height:36px;background:none;border:1px solid var(--border);border-radius:7px;color:var(--text);
+    font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;transition:all .15s;
+    display:flex;align-items:center;justify-content:center;gap:6px;
   }
-  .header {
-    text-align: center;
-    margin-bottom: 24px;
+  .btn-ghost:hover{background:var(--surface-2);border-color:var(--text-muted)}
+  .btn-danger{color:var(--danger);border-color:hsl(355 78% 60%/.25)}
+  .btn-danger:hover{background:hsl(355 78% 60%/.06);border-color:var(--danger)}
+
+  /* Alerts */
+  .alert{padding:10px 12px;border-radius:7px;font-size:12px;line-height:1.4;display:none;margin-top:12px}
+  .alert.show{display:block}
+  .alert-error{background:hsl(355 78% 60%/.07);border:1px solid hsl(355 78% 60%/.18);color:var(--danger)}
+
+  /* Session banner */
+  .session{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;font-size:12px;margin-bottom:12px}
+  .session .dot{width:7px;height:7px;border-radius:50%;background:var(--success);flex-shrink:0}
+  .session .info{flex:1;color:var(--text-secondary)}
+  .session .info strong{color:var(--text);font-weight:600}
+  .session button{background:none;border:none;color:var(--danger);font-size:12px;font-weight:500;cursor:pointer;padding:2px 6px;border-radius:4px}
+  .session button:hover{background:hsl(355 78% 60%/.08)}
+
+  /* Success */
+  .done-icon{width:48px;height:48px;border-radius:50%;background:hsl(158 58% 45%/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+  .done-icon svg{color:var(--success)}
+  .done h2{text-align:center;margin-bottom:4px}
+  .done p{text-align:center;color:var(--text-secondary);font-size:13px;margin-bottom:16px}
+  .code-block{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:12px;
+    font-family:var(--mono);font-size:11px;line-height:1.5;overflow-x:auto;white-space:pre;color:var(--text-secondary);
   }
-  .header svg { margin: 0 auto 16px; display: block; }
-  .header h2 {
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-  }
-  .header p {
-    margin-top: 6px;
-    font-size: 14px;
-    color: var(--muted);
-  }
-  .field { margin-bottom: 16px; }
-  .field label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    margin-bottom: 6px;
-  }
-  .field .input-wrap { position: relative; }
-  .field input {
-    width: 100%;
-    height: 40px;
-    padding: 0 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .field input:focus { border-color: var(--primary); }
-  .field input[type="password"] { padding-right: 40px; }
-  .toggle-pw {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--muted);
-    padding: 4px;
-    line-height: 1;
-  }
-  .btn {
-    width: 100%;
-    height: 40px;
-    margin-top: 8px;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .btn:hover { background: var(--primary-hover); }
-  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .error-msg {
-    margin-top: 12px;
-    padding: 10px 12px;
-    background: hsl(355 78% 60% / 0.08);
-    border: 1px solid hsl(355 78% 60% / 0.2);
-    color: var(--danger);
-    border-radius: 8px;
-    font-size: 13px;
-    display: none;
-  }
-  .error-msg.show { display: block; }
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.5s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .step { display: none; }
-  .step.active { display: block; }
-  .success {
-    text-align: center;
-    padding: 12px 0;
-  }
-  .success .check {
-    width: 56px; height: 56px;
-    background: hsl(158 58% 45% / 0.1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-    color: var(--success);
-    font-size: 28px;
-  }
-  .success h2 { margin-bottom: 8px; }
-  .success p { color: var(--muted); font-size: 14px; line-height: 1.5; }
-  .code-block {
-    text-align: left;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 11px;
-    overflow-x: auto;
-    margin-top: 16px;
-    white-space: pre;
-    color: var(--muted);
-  }
-  .scope-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-    margin-bottom: 4px;
-  }
-  .scope-row label {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .scope-row label:hover { border-color: var(--primary); }
-  .scope-row input[type="radio"] { accent-color: var(--primary); }
+
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .step{display:none}.step.active{display:block}
+  .footer{text-align:center;margin-top:16px;font-size:11px;color:var(--text-muted)}
+  .footer a{color:var(--primary);text-decoration:none}
+  .footer a:hover{text-decoration:underline}
+  .mt-12{margin-top:12px}
 </style>
 </head>
 <body>
-<div class="card">
-  <!-- Sign In -->
+<div class="wrapper">
+  <div class="logo-row">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 98" width="36" height="30"><rect width="118" height="98" rx="10" ry="10" fill="#646ecb"/><g transform="translate(5.2,-4.6) scale(1.39)" fill="#fff"><path d="M27.4 59L10.6 38.5 27.4 17.7l4.6 3.7L18.2 38.4l13.8 16.9z"/><path d="M49.6 59l-4.6-3.7L58.9 38.3 45.1 21.4l4.6-3.7L66.5 38.3z"/></g></svg>
+    <span class="wordmark">Laminar</span>
+    <span class="badge">MCP</span>
+  </div>
+
+  <div id="session-banner" class="session" style="display:none">
+    <div class="dot"></div>
+    <div class="info">Connected to <strong id="s-region"></strong> &middot; expires <span id="s-expires"></span></div>
+    <button onclick="doLogout()">Sign out</button>
+  </div>
+
+  <!-- Step 1: Sign in -->
   <div class="step active" id="step-login">
-    <div class="header">
-      ${LOGO_SVG}
-      <h2>Welcome back</h2>
-      <p>Sign in to connect Laminar to Cursor</p>
+    <div class="card">
+      <h2>Connect to Cursor</h2>
+      <p class="desc">Sign in with your Laminar account to enable the MCP integration in your editor.</p>
+      <form id="login-form" autocomplete="on">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@company.com" autocomplete="email" autofocus />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" class="toggle-pw" onclick="togglePw()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Region</label>
+          <div class="seg">
+            <label><input type="radio" name="region" value="api.laminar.run" checked /><span>US</span></label>
+            <label><input type="radio" name="region" value="ca.api.laminar.run" /><span>Canada</span></label>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" id="btn-login">Sign in</button>
+      </form>
+      <div class="alert alert-error" id="login-error"></div>
     </div>
-    <form id="login-form">
-      <div class="field">
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="you@company.com" autocomplete="email" autofocus />
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <div class="input-wrap">
-          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
-          <button type="button" class="toggle-pw" onclick="togglePw()">
-            <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="field">
-        <label>Region</label>
-        <div class="scope-row" style="margin-top:0">
-          <label><input type="radio" name="region" value="api.laminar.run" checked /> US</label>
-          <label><input type="radio" name="region" value="ca.api.laminar.run" /> Canada</label>
-        </div>
-      </div>
-      <div class="scope-row">
-        <label><input type="radio" name="scope" value="global" checked /> Global</label>
-        <label><input type="radio" name="scope" value="project" /> Project</label>
-      </div>
-      <button type="submit" class="btn" id="btn-login">Sign in</button>
-    </form>
-    <div class="error-msg" id="login-error"></div>
-    <div id="session-bar" style="display:none; margin-top:16px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:13px;">
-      <span style="color:var(--muted)">Existing session:</span>
-      <strong id="session-region"></strong> &middot; expires <span id="session-expires"></span>
-      <button onclick="doLogout()" style="float:right; background:none; border:none; color:var(--danger); cursor:pointer; font-size:13px; font-weight:500;">Sign out</button>
+    <div class="footer">
+      <a href="https://app.laminar.run/auth/signup" target="_blank">Create an account</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://docs.laminar.run" target="_blank">Documentation</a>
     </div>
   </div>
 
-  <!-- Done -->
+  <!-- Step 2: Done -->
   <div class="step" id="step-done">
-    <div class="header">
-      ${LOGO_SVG}
-    </div>
-    <div class="success">
-      <div class="check">&#10003;</div>
-      <h2>Connected!</h2>
-      <p>Laminar MCP is configured.<br/>Restart Cursor to activate.</p>
+    <div class="card done">
+      <div class="done-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2>Connected</h2>
+      <p>Restart Cursor to activate the Laminar MCP server.</p>
       <div class="code-block" id="config-preview"></div>
-      <button class="btn" onclick="window.close()" style="margin-top:16px">Close</button>
+      <button class="btn-ghost mt-12" onclick="window.close()">Close</button>
     </div>
   </div>
 </div>
 
 <script>
-function togglePw() {
-  const pw = document.getElementById('password');
-  pw.type = pw.type === 'password' ? 'text' : 'password';
-}
+function togglePw(){const p=document.getElementById('password');p.type=p.type==='password'?'text':'password'}
+function showError(m){const e=document.getElementById('login-error');e.textContent=m;e.classList.add('show')}
 
-function showError(msg) {
-  const el = document.getElementById('login-error');
-  el.textContent = msg;
-  el.classList.add('show');
-}
-
-// Check for existing session on load
-(async () => {
-  try {
-    const res = await fetch('/api/status');
-    const data = await res.json();
-    if (data.hasSession) {
-      const bar = document.getElementById('session-bar');
-      bar.style.display = 'block';
-      document.getElementById('session-region').textContent = data.region || 'US';
-      const exp = new Date(data.expiresAt);
-      document.getElementById('session-expires').textContent = exp.toLocaleString();
+// Session check
+(async()=>{try{
+  const r=await fetch('/api/status');const d=await r.json();
+  if(d.hasSession){
+    document.getElementById('session-banner').style.display='flex';
+    document.getElementById('s-region').textContent=d.region;
+    document.getElementById('s-expires').textContent=new Date(d.expiresAt).toLocaleString();
+    // Pre-select region
+    if(d.apiBase&&d.apiBase.includes('ca.api')){
+      document.querySelector('input[name="region"][value="ca.api.laminar.run"]').checked=true;
     }
-  } catch {}
-})();
+  }
+}catch{}})();
 
-async function doLogout() {
-  try {
-    await fetch('/api/logout', { method: 'POST' });
-    document.getElementById('session-bar').style.display = 'none';
-  } catch {}
+async function doLogout(){
+  try{await fetch('/api/logout',{method:'POST'})}catch{}
+  document.getElementById('session-banner').style.display='none';
 }
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
+document.getElementById('login-form').addEventListener('submit',async(e)=>{
   e.preventDefault();
-  const el = document.getElementById('login-error');
-  el.classList.remove('show');
-
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const scope = document.querySelector('input[name="scope"]:checked').value;
-  const region = document.querySelector('input[name="region"]:checked').value;
-
-  if (!email || !password) return showError('Email and password required.');
-
-  const btn = document.getElementById('btn-login');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Signing in...';
-
-  try {
-    const res = await fetch('/api/connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, scope, region }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Sign in failed');
-
-    document.getElementById('config-preview').textContent = data.configPreview;
+  document.getElementById('login-error').classList.remove('show');
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  const scope='global';
+  const region=document.querySelector('input[name="region"]:checked').value;
+  if(!email||!password)return showError('Email and password are required.');
+  const btn=document.getElementById('btn-login');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div>Signing in\u2026';
+  try{
+    const r=await fetch('/api/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,scope,region})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Sign in failed');
+    document.getElementById('config-preview').textContent=d.configPreview;
     document.getElementById('step-login').classList.remove('active');
     document.getElementById('step-done').classList.add('active');
-  } catch (err) {
-    showError(err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Sign in';
-  }
+  }catch(err){showError(err.message)}finally{btn.disabled=false;btn.textContent='Sign in'}
 });
 </script>
 </body>
@@ -409,7 +294,8 @@ async function startSetup() {
         if (fs.existsSync(TOKEN_PATH)) {
           try {
             const tokens = JSON.parse(fs.readFileSync(TOKEN_PATH, "utf-8"));
-            const apiBase: string = tokens.api_base || "https://api.laminar.run";
+            const apiBase: string =
+              tokens.api_base || "https://api.laminar.run";
             const region = apiBase.includes("ca.api") ? "Canada" : "US";
             return send(res, 200, {
               hasSession: true,
@@ -422,11 +308,9 @@ async function startSetup() {
         return send(res, 200, { hasSession: false });
       }
 
-      // ── Logout: clear tokens + remove from Cursor config ──
+      // ── Logout ──
       if (url.pathname === "/api/logout" && req.method === "POST") {
         if (fs.existsSync(TOKEN_PATH)) fs.unlinkSync(TOKEN_PATH);
-
-        // Also remove laminar from Cursor mcp.json
         for (const base of [
           path.join(os.homedir(), ".cursor"),
           path.join(process.cwd(), ".cursor"),
@@ -437,22 +321,23 @@ async function startSetup() {
               const cfg = JSON.parse(fs.readFileSync(mcpPath, "utf-8"));
               if (cfg.mcpServers?.laminar) {
                 delete cfg.mcpServers.laminar;
-                fs.writeFileSync(mcpPath, JSON.stringify(cfg, null, 2) + "\n");
+                fs.writeFileSync(
+                  mcpPath,
+                  JSON.stringify(cfg, null, 2) + "\n"
+                );
               }
             } catch {}
           }
         }
-
         console.log("Session cleared.");
         return send(res, 200, { ok: true });
       }
 
-      // Single endpoint: sign in → store tokens → write Cursor config
+      // ── Connect ──
       if (url.pathname === "/api/connect" && req.method === "POST") {
-        const { email, password, scope, region } = await jsonBody(req);
+        const { email, password, region } = await jsonBody(req);
         const apiBase = `https://${region || "api.laminar.run"}`;
 
-        // 1. Sign in
         const loginRes = await fetch(`${apiBase}/auth/signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -469,7 +354,7 @@ async function startSetup() {
           expires_in: number;
         };
 
-        // 2. Store tokens
+        // Store tokens
         const tokenDir = path.dirname(TOKEN_PATH);
         if (!fs.existsSync(tokenDir))
           fs.mkdirSync(tokenDir, { recursive: true });
@@ -489,48 +374,36 @@ async function startSetup() {
           { mode: 0o600 }
         );
 
-        // 3. Write Cursor MCP config
-        let configPath: string;
-        if (scope === "project") {
-          const dotCursor = path.join(process.cwd(), ".cursor");
-          if (!fs.existsSync(dotCursor))
-            fs.mkdirSync(dotCursor, { recursive: true });
-          configPath = path.join(dotCursor, "mcp.json");
-        } else {
-          const dotCursor = path.join(os.homedir(), ".cursor");
-          if (!fs.existsSync(dotCursor))
-            fs.mkdirSync(dotCursor, { recursive: true });
-          configPath = path.join(dotCursor, "mcp.json");
-        }
-
-        const mcpEntry = {
-          command: "node",
-          args: [MCP_ENTRY],
-        };
+        // Write global Cursor MCP config
+        const dotCursor = path.join(os.homedir(), ".cursor");
+        if (!fs.existsSync(dotCursor))
+          fs.mkdirSync(dotCursor, { recursive: true });
+        const configPath = path.join(dotCursor, "mcp.json");
 
         let existing: any = {};
         if (fs.existsSync(configPath)) {
           try {
             existing = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-          } catch {
-            // ignore
-          }
+          } catch {}
         }
         if (!existing.mcpServers) existing.mcpServers = {};
-        existing.mcpServers.laminar = mcpEntry;
+        existing.mcpServers.laminar = { command: "node", args: [MCP_ENTRY] };
 
         fs.writeFileSync(
           configPath,
           JSON.stringify(existing, null, 2) + "\n"
         );
 
-        const preview = JSON.stringify(existing, null, 2);
-
         console.log(`\n✓ Tokens stored at ${TOKEN_PATH}`);
         console.log(`✓ MCP config written to ${configPath}`);
-        console.log(`\nRestart Cursor to activate the Laminar MCP server.\n`);
+        console.log(
+          `\nRestart Cursor to activate the Laminar MCP server.\n`
+        );
 
-        send(res, 200, { configPath, configPreview: preview });
+        send(res, 200, {
+          configPath,
+          configPreview: JSON.stringify(existing, null, 2),
+        });
 
         setTimeout(() => {
           console.log("Setup complete.");
