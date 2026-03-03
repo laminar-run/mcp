@@ -4,8 +4,7 @@
  * Laminar MCP Server
  *
  * Brings your Laminar workspace into Cursor / Claude Code.
- * Supports reading executions, searching them, editing workflows,
- * managing configurations, and more.
+ * Core tools always available; Elasticsearch + CRON unlock with advanced setup.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -15,20 +14,36 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { LaminarClient, type LaminarAuth } from "./laminar-client.js";
+import { loadServiceConfig, CONFIG_PATH } from "./config.js";
+import { ElasticsearchService, CronService } from "./services.js";
+import { computeDiff } from "./diff.js";
+import {
+  pullWorkflow,
+  pushWorkflow,
+  syncStatus,
+  initProject,
+  pullAll,
+  pushChanged,
+  readManifest,
+} from "./sync.js";
 
 const TOKEN_PATH = path.join(os.homedir(), ".laminar", "tokens.json");
-const REFRESH_BUFFER_MS = 5 * 60 * 1000; // refresh 5 min before expiry
+const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 interface StoredTokens {
   access_token: string;
   refresh_token: string | null;
-  expires_at: number; // epoch ms
+  expires_at: number;
   api_base?: string;
 }
 
 function getApiBase(): string {
   const stored = readStoredTokens();
-  return stored?.api_base || process.env.LAMINAR_API_BASE || "https://api.laminar.run";
+  return (
+    stored?.api_base ||
+    process.env.LAMINAR_API_BASE ||
+    "https://api.laminar.run"
+  );
 }
 
 // ─── Token management ────────────────────────────────────────
@@ -81,12 +96,10 @@ async function getValidToken(): Promise<string> {
   const tokens = readStoredTokens();
   if (!tokens) throw new Error("No stored tokens");
 
-  // Still fresh
   if (Date.now() < tokens.expires_at - REFRESH_BUFFER_MS) {
     return tokens.access_token;
   }
 
-  // Try refresh
   if (tokens.refresh_token) {
     console.error("Refreshing Laminar access token...");
     const refreshed = await refreshAccessToken(tokens.refresh_token);
@@ -97,7 +110,6 @@ async function getValidToken(): Promise<string> {
     }
   }
 
-  // Expired and can't refresh — use what we have (will fail at API level)
   console.error(
     "Warning: Token expired and refresh failed. Run `npm run setup` to re-authenticate."
   );
@@ -105,16 +117,16 @@ async function getValidToken(): Promise<string> {
 }
 
 // ─── Resolve auth ────────────────────────────────────────────
-// Priority: LAMINAR_API_KEY > env token > stored tokens from setup
+
 async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string }> {
   const apiKey = process.env.LAMINAR_API_KEY;
   const accessToken = process.env.LAMINAR_ACCESS_TOKEN;
   const baseUrl = getApiBase();
 
   if (apiKey) return { auth: { type: "apiKey", token: apiKey }, baseUrl };
-  if (accessToken) return { auth: { type: "bearer", token: accessToken }, baseUrl };
+  if (accessToken)
+    return { auth: { type: "bearer", token: accessToken }, baseUrl };
 
-  // Try stored tokens from `npm run setup`
   const stored = readStoredTokens();
   if (stored) {
     const token = await getValidToken();
@@ -128,8 +140,9 @@ async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string }> {
 }
 
 let client: LaminarClient;
+let esService: ElasticsearchService | null = null;
+let cronService: CronService | null = null;
 
-// Auto-refresh timer
 function scheduleTokenRefresh() {
   const tokens = readStoredTokens();
   if (!tokens?.refresh_token) return;
@@ -152,6 +165,7 @@ function scheduleTokenRefresh() {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
+
 function json(data: unknown): string {
   return JSON.stringify(data, null, 2);
 }
@@ -172,20 +186,66 @@ async function safe<T>(fn: () => Promise<T>) {
   }
 }
 
+const NOT_CONFIGURED_ES = `Elasticsearch is not configured. Log search requires ES credentials.
+
+**Option 1 — Environment variables:**
+  ELASTICSEARCH_ENDPOINT=https://your-es-cluster
+  ELASTICSEARCH_API_KEY=your-api-key
+  ELASTICSEARCH_INDEX_NAME=search-workflow-executions (optional)
+
+**Option 2 — Config file** (~/.laminar/config.json):
+  {
+    "elasticsearch": {
+      "endpoint": "https://your-es-cluster",
+      "apiKey": "your-api-key"
+    }
+  }
+
+**Option 3 — Run setup:** laminar-mcp-setup → Advanced Settings`;
+
+const NOT_CONFIGURED_CRON = `CRON service is not configured. Scheduling requires CRON credentials.
+
+**Option 1 — Environment variables:**
+  CRON_API_KEY=your-cron-api-key
+  CRON_API_BASE=https://cron.laminar.run (optional)
+
+**Option 2 — Config file** (~/.laminar/config.json):
+  {
+    "cron": {
+      "apiKey": "your-cron-api-key"
+    }
+  }
+
+**Option 3 — Run setup:** laminar-mcp-setup → Advanced Settings`;
+
+function requireES() {
+  if (!esService) return text(NOT_CONFIGURED_ES);
+  return null;
+}
+
+function requireCron() {
+  if (!cronService) return text(NOT_CONFIGURED_CRON);
+  return null;
+}
+
 // ─── Server ──────────────────────────────────────────────────
+
 const server = new McpServer({
   name: "laminar",
-  version: "1.0.0",
+  version: "1.1.0",
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  TOOLS
+//  CORE TOOLS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // ── Auth / User ──────────────────────────────────────────────
 
-server.tool("get_current_user", "Get the current authenticated user info", {}, async () =>
-  safe(() => client.getMe())
+server.tool(
+  "get_current_user",
+  "Get the current authenticated user info",
+  {},
+  async () => safe(() => client.getMe())
 );
 
 // ── Workspaces ───────────────────────────────────────────────
@@ -218,8 +278,7 @@ server.tool(
   "list_workflows",
   "List all workflows in a workspace",
   { workspaceId: z.number().describe("Workspace ID") },
-  async ({ workspaceId }) =>
-    safe(() => client.listWorkflows(workspaceId))
+  async ({ workspaceId }) => safe(() => client.listWorkflows(workspaceId))
 );
 
 server.tool(
@@ -272,8 +331,7 @@ server.tool(
   "restore_workflow",
   "Restore a previously deleted/archived workflow",
   { workflowId: z.number().describe("Workflow ID") },
-  async ({ workflowId }) =>
-    safe(() => client.restoreWorkflow(workflowId))
+  async ({ workflowId }) => safe(() => client.restoreWorkflow(workflowId))
 );
 
 server.tool(
@@ -418,11 +476,13 @@ server.tool(
     status: z
       .string()
       .optional()
-      .describe("Filter: SUCCESS, FAILED, RUNNING, PENDING, SKIPPED, UNKNOWN"),
+      .describe(
+        "Filter: SUCCESS, FAILED, RUNNING, PENDING, SKIPPED, UNKNOWN"
+      ),
     configurationId: z
-      .number()
+      .union([z.number(), z.string()])
       .optional()
-      .describe("Filter by configuration store ID"),
+      .describe("Filter by configuration store ID (number or string)"),
     sortDirection: z
       .enum(["asc", "desc"])
       .optional()
@@ -538,9 +598,9 @@ server.tool(
     workflowId: z.number().describe("Workflow ID"),
     body: z.any().optional().describe("Input data for the workflow (JSON)"),
     configurationId: z
-      .number()
+      .union([z.number(), z.string()])
       .optional()
-      .describe("Configuration store ID to use"),
+      .describe("Configuration store ID to use (number or string)"),
     startFromStep: z
       .number()
       .optional()
@@ -567,9 +627,9 @@ server.tool(
     workflowId: z.number().describe("Workflow ID"),
     body: z.any().optional().describe("Input data for the workflow (JSON)"),
     configurationId: z
-      .number()
+      .union([z.number(), z.string()])
       .optional()
-      .describe("Configuration store ID to use"),
+      .describe("Configuration store ID to use (number or string)"),
     startFromStep: z
       .number()
       .optional()
@@ -834,7 +894,7 @@ server.tool(
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  WORKFLOW-CENTRIC TOOLS
+//  WORKFLOW-CENTRIC TOOLS (improved UX)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 server.tool(
@@ -842,14 +902,23 @@ server.tool(
   "Show a diff of the current flow code vs your proposed changes BEFORE updating. Use this to review changes before pushing them to Laminar.",
   {
     flowId: z.number().describe("Flow ID to compare against"),
-    proposedProgram: z.string().describe("The new program code you want to set"),
+    proposedProgram: z
+      .string()
+      .describe("The new program code you want to set"),
     proposedName: z.string().optional().describe("New name (if changing)"),
-    proposedDescription: z.string().optional().describe("New description (if changing)"),
+    proposedDescription: z
+      .string()
+      .optional()
+      .describe("New description (if changing)"),
   },
   async ({ flowId, proposedProgram, proposedName, proposedDescription }) => {
     try {
       const flow = await client.getFlow(flowId);
       const currentCode = await client.readFlow(flowId);
+      const current =
+        typeof currentCode === "string"
+          ? currentCode
+          : JSON.stringify(currentCode, null, 2);
 
       const lines = [
         `## Flow: ${flow.name} (ID: ${flowId})`,
@@ -858,27 +927,20 @@ server.tool(
       ];
 
       if (proposedName && proposedName !== flow.name) {
-        lines.push(`### Name Change`);
-        lines.push(`- **Current:** ${flow.name}`);
-        lines.push(`- **Proposed:** ${proposedName}`);
+        lines.push(`### Name: ${flow.name} → ${proposedName}`);
         lines.push("");
       }
 
       if (proposedDescription && proposedDescription !== flow.description) {
-        lines.push(`### Description Change`);
-        lines.push(`- **Current:** ${flow.description}`);
-        lines.push(`- **Proposed:** ${proposedDescription}`);
+        lines.push(
+          `### Description: ${flow.description} → ${proposedDescription}`
+        );
         lines.push("");
       }
 
-      lines.push(`### Current Code`);
-      lines.push("```");
-      lines.push(typeof currentCode === "string" ? currentCode : JSON.stringify(currentCode, null, 2));
-      lines.push("```");
-      lines.push("");
-      lines.push(`### Proposed Code`);
-      lines.push("```");
-      lines.push(proposedProgram);
+      lines.push("### Code Diff");
+      lines.push("```diff");
+      lines.push(computeDiff(current, proposedProgram));
       lines.push("```");
 
       return text(lines.join("\n"));
@@ -893,7 +955,10 @@ server.tool(
   "Get a complete overview of a workflow: all steps with their code, recent executions, and config. Useful as context before making changes.",
   {
     workflowId: z.number().describe("Workflow ID"),
-    includeExecutions: z.number().optional().describe("Number of recent executions to include (default 3)"),
+    includeExecutions: z
+      .number()
+      .optional()
+      .describe("Number of recent executions to include (default 3)"),
   },
   async ({ workflowId, includeExecutions = 3 }) => {
     try {
@@ -905,12 +970,17 @@ server.tool(
 
       const flowList = Array.isArray(flows) ? flows : [];
 
-      // Fetch code for each flow
       const flowsWithCode = await Promise.all(
         flowList.map(async (f: any) => {
           try {
             const code = await client.readFlow(f.id);
-            return { ...f, code: typeof code === "string" ? code : JSON.stringify(code) };
+            return {
+              ...f,
+              code:
+                typeof code === "string"
+                  ? code
+                  : JSON.stringify(code),
+            };
           } catch {
             return { ...f, code: "(could not read)" };
           }
@@ -941,36 +1011,38 @@ server.tool(
   "Get the input data from a specific execution, so you can reuse it to test the workflow again. Returns data.input from the first step.",
   {
     workflowId: z.number().describe("Workflow ID"),
-    executionId: z.number().describe("Execution ID to get input from"),
+    executionId: z
+      .number()
+      .describe("Execution ID to get input from"),
   },
   async ({ workflowId, executionId }) => {
     try {
       const exec = await client.getExecution(workflowId, executionId);
       const flowRuns = exec?.flowRuns || [];
-      if (flowRuns.length === 0) return text("No flow runs found in this execution.");
+      if (flowRuns.length === 0)
+        return text("No flow runs found in this execution.");
 
-      // The first flow run's transformation/payload contains the input
       const firstRun = flowRuns[0];
       let input: any = null;
 
-      // Try the transformation field (contains data.input)
       if (firstRun.transformation) {
         try {
-          const t = typeof firstRun.transformation === "string"
-            ? JSON.parse(firstRun.transformation)
-            : firstRun.transformation;
+          const t =
+            typeof firstRun.transformation === "string"
+              ? JSON.parse(firstRun.transformation)
+              : firstRun.transformation;
           input = t?.input || t;
         } catch {
           input = firstRun.transformation;
         }
       }
 
-      // Fallback to payload
       if (!input && firstRun.payload) {
         try {
-          input = typeof firstRun.payload === "string"
-            ? JSON.parse(firstRun.payload)
-            : firstRun.payload;
+          input =
+            typeof firstRun.payload === "string"
+              ? JSON.parse(firstRun.payload)
+              : firstRun.payload;
         } catch {
           input = firstRun.payload;
         }
@@ -998,8 +1070,16 @@ server.tool(
     mode: z.enum(["up_to", "single", "from"]).describe(
       "up_to: run steps 1..N, single: run only step N, from: run steps N..end"
     ),
-    body: z.any().optional().describe("Input data (JSON). Use get_execution_input to grab from a previous run."),
-    configurationId: z.number().optional().describe("Configuration store ID"),
+    body: z
+      .any()
+      .optional()
+      .describe(
+        "Input data (JSON). Use get_execution_input to grab from a previous run."
+      ),
+    configurationId: z
+      .union([z.number(), z.string()])
+      .optional()
+      .describe("Configuration store ID (number or string)"),
   },
   async ({ workflowId, step, mode, body, configurationId }) => {
     try {
@@ -1023,11 +1103,16 @@ server.tool(
 
 server.tool(
   "compare_flow_versions",
-  "Compare two versions of a flow side by side. Useful for reviewing what changed between versions.",
+  "Compare two versions of a flow side by side with a unified diff. Useful for reviewing what changed between versions.",
   {
     flowId: z.number().describe("Flow ID"),
-    versionA: z.number().optional().describe("First version ID (omit for current)"),
-    versionB: z.number().describe("Second version ID to compare against"),
+    versionA: z
+      .number()
+      .optional()
+      .describe("First version ID (omit for current)"),
+    versionB: z
+      .number()
+      .describe("Second version ID to compare against"),
   },
   async ({ flowId, versionA, versionB }) => {
     try {
@@ -1038,12 +1123,20 @@ server.tool(
         client.readFlowVersion(flowId, versionB),
       ]);
 
+      const strA =
+        typeof codeA === "string"
+          ? codeA
+          : JSON.stringify(codeA, null, 2);
+      const strB =
+        typeof codeB === "string"
+          ? codeB
+          : JSON.stringify(codeB, null, 2);
+
       const labelA = versionA ? `Version ${versionA}` : "Current";
       const labelB = `Version ${versionB}`;
 
       return text(
-        `## ${labelA}\n\`\`\`\n${typeof codeA === "string" ? codeA : JSON.stringify(codeA, null, 2)}\n\`\`\`\n\n` +
-        `## ${labelB}\n\`\`\`\n${typeof codeB === "string" ? codeB : JSON.stringify(codeB, null, 2)}\n\`\`\``
+        `## Flow ${flowId}: ${labelA} vs ${labelB}\n\n\`\`\`diff\n${computeDiff(strA, strB, labelA, labelB)}\n\`\`\``
       );
     } catch (e: any) {
       return text(`Error: ${e.message}`);
@@ -1053,42 +1146,743 @@ server.tool(
 
 server.tool(
   "diagnose_execution",
-  "Analyze a workflow execution to find failures. Returns only the failed steps with their errors, input data, and code for quick debugging.",
+  "Analyze a workflow execution to find failures. Returns failed steps with their errors, the preceding step's output (context), input data, and code.",
   {
     workflowId: z.number().describe("Workflow ID"),
-    executionId: z.number().describe("Execution ID to diagnose"),
+    executionId: z
+      .number()
+      .describe("Execution ID to diagnose"),
   },
   async ({ workflowId, executionId }) => {
     try {
       const exec = await client.getExecution(workflowId, executionId);
-      const flowRuns = exec?.flowRuns || [];
+      const flowRuns: any[] = exec?.flowRuns || [];
 
       const failures = flowRuns.filter(
         (r: any) => r.status === "FAILED"
       );
 
       if (failures.length === 0) {
-        return text(
-          `Execution ${executionId} status: ${exec.status}. No failed steps found.`
-        );
+        const summary = flowRuns.map((r: any) => ({
+          step: r.executionOrder,
+          name: r.flowName,
+          status: r.status,
+          duration: r.durationMs,
+        }));
+        return ok({
+          executionId,
+          overallStatus: exec.status,
+          message: "No failed steps found.",
+          stepSummary: summary,
+        });
       }
 
-      const details = failures.map((r: any) => ({
-        stepName: r.flowName,
-        executionOrder: r.executionOrder,
-        status: r.status,
-        error: r.executionLog || r.response,
-        transformation: r.transformation,
-        program: r.program,
-      }));
+      const details = failures.map((r: any) => {
+        const prevStep = flowRuns.find(
+          (p: any) =>
+            p.executionOrder === r.executionOrder - 1 &&
+            p.status === "SUCCESS"
+        );
+
+        return {
+          stepName: r.flowName,
+          executionOrder: r.executionOrder,
+          status: r.status,
+          duration: r.durationMs,
+          error: r.executionLog || r.response,
+          transformation: r.transformation,
+          program: r.program,
+          precedingStepOutput: prevStep
+            ? {
+                name: prevStep.flowName,
+                response: prevStep.response,
+              }
+            : null,
+        };
+      });
 
       return ok({
         executionId,
         overallStatus: exec.status,
+        startedAt: exec.startedAt,
+        endedAt: exec.endedAt,
         failedStepCount: failures.length,
         totalSteps: flowRuns.length,
         failures: details,
       });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ELASTICSEARCH LOG SEARCH (advanced — requires ES config)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+server.tool(
+  "search_logs",
+  "Full-text search across workflow execution logs, responses, programs, and transformations using Elasticsearch. Requires ES to be configured (see setup). Supports field syntax (status:FAILED), fuzzy search, date ranges, and raw ES queries.",
+  {
+    workspaceId: z.string().describe("Workspace ID"),
+    query: z
+      .string()
+      .optional()
+      .describe(
+        "Search text. Supports field:value syntax, wildcards, boolean operators, exact phrases in quotes."
+      ),
+    workflowId: z
+      .string()
+      .optional()
+      .describe("Filter to a single workflow ID"),
+    workflowIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter to multiple workflow IDs"),
+    status: z
+      .string()
+      .optional()
+      .describe("Filter by status: SUCCESS, FAILED, RUNNING, etc."),
+    startDate: z.string().optional().describe("Start date (ISO 8601)"),
+    endDate: z.string().optional().describe("End date (ISO 8601)"),
+    fuzzy: z
+      .boolean()
+      .optional()
+      .describe("Enable fuzzy matching (default false)"),
+    includeGlobalObject: z
+      .boolean()
+      .optional()
+      .describe(
+        "Also search global workflow object — slower but more thorough"
+      ),
+    rawQuery: z
+      .string()
+      .optional()
+      .describe("Raw Elasticsearch JSON query (advanced mode)"),
+    size: z.number().optional().describe("Results per page (default 20)"),
+    from: z.number().optional().describe("Offset for pagination"),
+  },
+  async (params) => {
+    const blocked = requireES();
+    if (blocked) return blocked;
+    try {
+      const results = await esService!.search(params);
+      return ok(results);
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "search_across_workflows",
+  "Search for a value (order ID, error message, customer name, etc.) across multiple workflows in a time range. Great for incident investigation — finds correlated failures. Requires ES to be configured.",
+  {
+    workspaceId: z.string().describe("Workspace ID"),
+    query: z
+      .string()
+      .describe(
+        "What to search for (order ID, error message, entity name, etc.)"
+      ),
+    workflowIds: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Specific workflow IDs to search (omit to search ALL workflows)"
+      ),
+    startDate: z.string().optional().describe("Start of time range (ISO 8601)"),
+    endDate: z.string().optional().describe("End of time range (ISO 8601)"),
+    status: z
+      .string()
+      .optional()
+      .describe("Filter by status (e.g., FAILED)"),
+    size: z.number().optional().describe("Max results (default 50)"),
+  },
+  async ({ workspaceId, query, workflowIds, startDate, endDate, status, size }) => {
+    const blocked = requireES();
+    if (blocked) return blocked;
+    try {
+      const results = await esService!.search({
+        workspaceId,
+        query,
+        workflowIds,
+        startDate,
+        endDate,
+        status,
+        size: size || 50,
+        fuzzy: true,
+        includeGlobalObject: true,
+      });
+
+      // Group by workflow for easier reading
+      const byWorkflow = new Map<string, any[]>();
+      for (const hit of results.hits) {
+        const wId = hit.workflowId || "unknown";
+        if (!byWorkflow.has(wId)) byWorkflow.set(wId, []);
+        byWorkflow.get(wId)!.push(hit);
+      }
+
+      return ok({
+        total: results.total,
+        took: results.took,
+        query,
+        timeRange: { startDate, endDate },
+        byWorkflow: Object.fromEntries(byWorkflow),
+        warning: results.warning,
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "investigate_incident",
+  "Investigate an incident across workflows. Finds all failures in a time window, correlates by shared data, and produces a timeline. Works with or without Elasticsearch — ES gives full-text search, without ES falls back to API-based execution listing.",
+  {
+    workspaceId: z.number().describe("Workspace ID"),
+    workflowIds: z
+      .array(z.number())
+      .describe("Workflow IDs to investigate"),
+    startDate: z
+      .string()
+      .optional()
+      .describe("Start of incident window (ISO 8601)"),
+    endDate: z
+      .string()
+      .optional()
+      .describe("End of incident window (ISO 8601)"),
+    keywords: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Search terms to correlate (order IDs, error messages, etc.)"
+      ),
+    status: z
+      .string()
+      .optional()
+      .describe("Filter status (default: FAILED)"),
+  },
+  async ({
+    workspaceId,
+    workflowIds,
+    startDate,
+    endDate,
+    keywords,
+    status,
+  }) => {
+    try {
+      const filterStatus = status || "FAILED";
+
+      if (esService && keywords?.length) {
+        // ES-powered investigation: search for keywords across workflows
+        const searchPromises = keywords.map((kw) =>
+          esService!.search({
+            workspaceId: String(workspaceId),
+            query: kw,
+            workflowIds: workflowIds.map(String),
+            startDate,
+            endDate,
+            status: filterStatus,
+            size: 20,
+            fuzzy: true,
+            includeGlobalObject: true,
+          })
+        );
+
+        const searchResults = await Promise.all(searchPromises);
+
+        const allHits: any[] = [];
+        const seen = new Set<string>();
+        for (let i = 0; i < searchResults.length; i++) {
+          for (const hit of searchResults[i].hits) {
+            if (!seen.has(hit.id)) {
+              seen.add(hit.id);
+              allHits.push({
+                ...hit,
+                matchedKeyword: keywords![i],
+              });
+            }
+          }
+        }
+
+        allHits.sort(
+          (a, b) =>
+            new Date(a.startedAt || 0).getTime() -
+            new Date(b.startedAt || 0).getTime()
+        );
+
+        return ok({
+          mode: "elasticsearch",
+          totalMatches: allHits.length,
+          keywords,
+          timeline: allHits.map((h) => ({
+            time: h.startedAt,
+            workflowId: h.workflowId,
+            workflowName: h.workflowName,
+            executionId: h.executionId,
+            status: h.status,
+            matchedKeyword: h.matchedKeyword,
+            score: h.score,
+          })),
+        });
+      }
+
+      // API-based fallback: list executions from each workflow
+      const allExecs: any[] = [];
+      await Promise.all(
+        workflowIds.map(async (wId) => {
+          try {
+            const workflow = await client.getWorkflow(wId);
+            const execs = await client.listExecutions(wId, {
+              startDate,
+              endDate,
+              status: filterStatus,
+              size: 20,
+            });
+            const list = execs?.content || execs || [];
+            for (const exec of Array.isArray(list) ? list : []) {
+              allExecs.push({
+                workflowId: wId,
+                workflowName: workflow.name,
+                ...exec,
+              });
+            }
+          } catch {}
+        })
+      );
+
+      allExecs.sort(
+        (a, b) =>
+          new Date(a.startedAt || 0).getTime() -
+          new Date(b.startedAt || 0).getTime()
+      );
+
+      // Diagnose each failed execution
+      const diagnosed = await Promise.all(
+        allExecs.slice(0, 10).map(async (exec) => {
+          try {
+            const full = await client.getExecution(
+              exec.workflowId,
+              exec.id
+            );
+            const failedSteps = (full.flowRuns || []).filter(
+              (r: any) => r.status === "FAILED"
+            );
+            return {
+              time: exec.startedAt,
+              workflowId: exec.workflowId,
+              workflowName: exec.workflowName,
+              executionId: exec.id,
+              status: exec.status,
+              failedSteps: failedSteps.map((f: any) => ({
+                step: f.executionOrder,
+                name: f.flowName,
+                error:
+                  f.executionLog?.substring(0, 500) ||
+                  (typeof f.response === "string"
+                    ? f.response.substring(0, 500)
+                    : JSON.stringify(f.response)?.substring(0, 500)),
+              })),
+            };
+          } catch {
+            return {
+              time: exec.startedAt,
+              workflowId: exec.workflowId,
+              workflowName: exec.workflowName,
+              executionId: exec.id,
+              status: exec.status,
+              failedSteps: [],
+            };
+          }
+        })
+      );
+
+      return ok({
+        mode: "api",
+        hint: "Configure Elasticsearch for keyword-based correlation search",
+        totalFailures: allExecs.length,
+        timeline: diagnosed,
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CRON JOB MANAGEMENT (advanced — requires CRON config)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+server.tool(
+  "list_cron_jobs",
+  "List all CRON jobs, optionally filtered by workflow. Requires CRON service to be configured.",
+  {
+    workflowId: z
+      .string()
+      .optional()
+      .describe("Filter by workflow ID (omit for all jobs)"),
+  },
+  async ({ workflowId }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    return safe(() => cronService!.listJobs(workflowId));
+  }
+);
+
+server.tool(
+  "get_cron_job",
+  "Get details of a specific CRON job",
+  { jobId: z.string().describe("CRON job ID") },
+  async ({ jobId }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    return safe(() => cronService!.getJob(jobId));
+  }
+);
+
+server.tool(
+  "create_cron_job",
+  "Create a new CRON job to run a workflow on a schedule",
+  {
+    name: z.string().describe("Job name"),
+    schedule: z
+      .string()
+      .describe("CRON expression (e.g., '0 */30 * * * *' for every 30 min)"),
+    url: z
+      .string()
+      .describe(
+        "Workflow execution URL (e.g., https://api.laminar.run/workflow/execute/external/{id}?api_key=...)"
+      ),
+    body: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe("JSON body to send with each execution"),
+    enabled: z
+      .boolean()
+      .optional()
+      .describe("Start enabled (default true)"),
+    maxRuns: z
+      .number()
+      .optional()
+      .describe("Max number of runs (null for unlimited)"),
+  },
+  async ({ name, schedule, url, body, enabled, maxRuns }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    return safe(() =>
+      cronService!.createJob({
+        name,
+        schedule,
+        url,
+        body,
+        enabled: enabled ?? true,
+        max_runs: maxRuns,
+      })
+    );
+  }
+);
+
+server.tool(
+  "update_cron_job",
+  "Update an existing CRON job (name, schedule, URL, body, enabled)",
+  {
+    jobId: z.string().describe("CRON job ID"),
+    name: z.string().optional().describe("New name"),
+    schedule: z.string().optional().describe("New CRON schedule"),
+    url: z.string().optional().describe("New execution URL"),
+    body: z
+      .record(z.string(), z.any())
+      .optional()
+      .describe("New JSON body"),
+    enabled: z.boolean().optional().describe("Enable or disable"),
+  },
+  async ({ jobId, ...updates }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    return safe(() => cronService!.updateJob(jobId, updates));
+  }
+);
+
+server.tool(
+  "toggle_cron_job",
+  "Toggle a CRON job on/off",
+  { jobId: z.string().describe("CRON job ID") },
+  async ({ jobId }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    return safe(() => cronService!.toggleJob(jobId));
+  }
+);
+
+server.tool(
+  "trigger_cron_job",
+  "Manually trigger a CRON job right now (runs it once immediately)",
+  { jobId: z.string().describe("CRON job ID") },
+  async ({ jobId }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    try {
+      await cronService!.triggerJob(jobId);
+      return text(`CRON job ${jobId} triggered successfully.`);
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "delete_cron_job",
+  "Delete a CRON job",
+  { jobId: z.string().describe("CRON job ID") },
+  async ({ jobId }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    try {
+      await cronService!.deleteJob(jobId);
+      return text(`CRON job ${jobId} deleted.`);
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "schedule_retry",
+  "Schedule automatic retries for a failed workflow execution. Creates a temporary CRON job that re-runs the workflow with the original input. Requires CRON service.",
+  {
+    workflowId: z.number().describe("Workflow ID"),
+    executionId: z
+      .number()
+      .describe("Failed execution ID to retry"),
+    schedule: z
+      .string()
+      .optional()
+      .describe(
+        "CRON schedule (default: every 30 min — '0 */30 * * * *')"
+      ),
+    maxAttempts: z
+      .number()
+      .optional()
+      .describe("Max retry attempts (default 3)"),
+    executionUrl: z
+      .string()
+      .describe(
+        "Workflow execution URL with API key (e.g., https://api.laminar.run/workflow/execute/external/{id}?api_key=...)"
+      ),
+  },
+  async ({
+    workflowId,
+    executionId,
+    schedule,
+    maxAttempts,
+    executionUrl,
+  }) => {
+    const blocked = requireCron();
+    if (blocked) return blocked;
+    try {
+      // Get original execution input
+      const exec = await client.getExecution(workflowId, executionId);
+      const flowRuns = exec?.flowRuns || [];
+      let inputData: any = {};
+
+      if (flowRuns.length > 0) {
+        const first = flowRuns[0];
+        if (first.transformation) {
+          try {
+            const t =
+              typeof first.transformation === "string"
+                ? JSON.parse(first.transformation)
+                : first.transformation;
+            inputData = t?.input || t;
+          } catch {
+            inputData = {};
+          }
+        }
+      }
+
+      const job = await cronService!.createJob({
+        name: `Retry: Workflow ${workflowId} (Exec #${executionId})`,
+        schedule: schedule || "0 */30 * * * *",
+        url: executionUrl,
+        body: {
+          ...inputData,
+          "lam.retryAttempt": true,
+          "lam.originalExecutionId": executionId,
+          "lam.retryReason": "mcp_scheduled_retry",
+        },
+        max_runs: maxAttempts || 3,
+        is_temporary: true,
+        enabled: true,
+      });
+
+      return ok({
+        message: "Retry scheduled",
+        jobId: job.id,
+        schedule: schedule || "0 */30 * * * *",
+        maxAttempts: maxAttempts || 3,
+        originalInput: inputData,
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  WORKFLOW SYNC — pull/push/init for git version control
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+server.tool(
+  "init_project",
+  "Scaffold a full Laminar project from a workspace. Pulls all (or selected) workflows into a git-ready directory with laminar.json manifest, GitHub Actions CI/CD configs, README, and .gitignore. This is the onboarding tool — run it once to set up version control for a workspace.",
+  {
+    workspaceId: z.number().describe("Workspace ID to pull workflows from"),
+    outputDir: z
+      .string()
+      .describe(
+        "Directory to create the project in (e.g., /Users/you/my-laminar-workflows)"
+      ),
+    workflowIds: z
+      .array(z.number())
+      .optional()
+      .describe("Specific workflow IDs to include (omit to pull ALL workflows)"),
+  },
+  async ({ workspaceId, outputDir, workflowIds }) => {
+    try {
+      const resolved = path.resolve(outputDir);
+      const result = await initProject(client, workspaceId, resolved, {
+        workflowIds,
+        apiBase: getApiBase(),
+      });
+      return ok({
+        ...result,
+        nextSteps: [
+          `cd ${resolved}`,
+          "git init && git add . && git commit -m 'Initial Laminar workflow sync'",
+          "git remote add origin <your-github-repo-url>",
+          "git push -u origin main",
+          "Add LAMINAR_API_KEY as a repository secret in GitHub Settings > Secrets",
+          "Done! Push to main to deploy, open PRs to preview changes.",
+        ],
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "pull_workflow",
+  "Download a workflow from Laminar to local files for version control. Creates a directory with individual step files + workflow.json metadata. Compatible with git.",
+  {
+    workflowId: z.number().describe("Workflow ID to pull"),
+    outputDir: z
+      .string()
+      .describe(
+        "Local directory to write files to (e.g., ./workflows/my-workflow)"
+      ),
+  },
+  async ({ workflowId, outputDir }) => {
+    try {
+      const resolved = path.resolve(outputDir);
+      const result = await pullWorkflow(client, workflowId, resolved);
+      return ok({
+        ...result,
+        hint: "Files are ready for git. Edit step files in steps/, then use push_workflow to deploy.",
+      });
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "push_workflow",
+  "Deploy local workflow files to Laminar. Reads workflow.json + step files and pushes them via create_or_update_flows API.",
+  {
+    workflowDir: z
+      .string()
+      .describe(
+        "Local directory containing workflow.json and steps/ folder"
+      ),
+    workflowId: z
+      .number()
+      .optional()
+      .describe(
+        "Target workflow ID (overrides ID in workflow.json)"
+      ),
+  },
+  async ({ workflowDir, workflowId }) => {
+    try {
+      const resolved = path.resolve(workflowDir);
+      const result = await pushWorkflow(client, resolved, workflowId);
+      return ok(result);
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "sync_status",
+  "Compare local workflow files against what's deployed on Laminar. Shows which steps are modified, added, or unchanged.",
+  {
+    workflowDir: z
+      .string()
+      .describe(
+        "Local directory containing workflow.json and steps/ folder"
+      ),
+    workflowId: z
+      .number()
+      .optional()
+      .describe(
+        "Workflow ID to compare against (overrides ID in workflow.json)"
+      ),
+  },
+  async ({ workflowDir, workflowId }) => {
+    try {
+      const resolved = path.resolve(workflowDir);
+      const result = await syncStatus(client, resolved, workflowId);
+      return ok(result);
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "pull_all",
+  "Pull all workflows defined in the laminar.json manifest. Updates local step files from what's deployed on Laminar.",
+  {
+    projectDir: z
+      .string()
+      .describe("Root project directory containing laminar.json"),
+  },
+  async ({ projectDir }) => {
+    try {
+      const resolved = path.resolve(projectDir);
+      const result = await pullAll(client, resolved);
+      return ok(result);
+    } catch (e: any) {
+      return text(`Error: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "push_changed",
+  "Push only the workflows that have local changes to Laminar. Reads laminar.json manifest, diffs each workflow, and deploys only the modified ones.",
+  {
+    projectDir: z
+      .string()
+      .describe("Root project directory containing laminar.json"),
+  },
+  async ({ projectDir }) => {
+    try {
+      const resolved = path.resolve(projectDir);
+      const result = await pushChanged(client, resolved);
+      return ok(result);
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
@@ -1326,6 +2120,24 @@ async function main() {
   const { auth, baseUrl } = await resolveAuth();
   client = new LaminarClient(auth, baseUrl);
   scheduleTokenRefresh();
+
+  // Initialize optional services
+  const svcConfig = loadServiceConfig();
+
+  if (svcConfig.elasticsearch) {
+    esService = new ElasticsearchService(svcConfig.elasticsearch);
+    console.error("Elasticsearch: configured");
+  } else {
+    console.error("Elasticsearch: not configured (log search disabled)");
+  }
+
+  if (svcConfig.cron) {
+    cronService = new CronService(svcConfig.cron);
+    console.error("CRON service: configured");
+  } else {
+    console.error("CRON service: not configured (scheduling disabled)");
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Laminar MCP server running on stdio");

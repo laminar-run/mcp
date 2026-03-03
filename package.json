@@ -1,12 +1,13 @@
 {
   "name": "@laminar/mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Laminar - bring your Laminar workspace into Cursor and Claude Code",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "laminar-mcp": "dist/index.js",
-    "laminar-mcp-setup": "dist/setup.js"
+    "laminar-mcp-setup": "dist/setup.js",
+    "laminar": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",

@@ -3,8 +3,9 @@
 /**
  * Laminar MCP — Interactive Setup
  *
- * Opens a browser, user signs in with Laminar credentials,
- * tokens are stored and the MCP server is registered with Cursor.
+ * Step 1: Sign in with Laminar credentials (required)
+ * Step 2: Advanced — configure Elasticsearch, CRON (optional)
+ * Tokens + config stored, MCP server registered with Cursor.
  */
 
 import http from "node:http";
@@ -12,6 +13,7 @@ import { exec } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
+import { saveServiceConfig, CONFIG_PATH } from "./config.js";
 
 const MCP_ENTRY = path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
@@ -77,19 +79,16 @@ const HTML = `<!DOCTYPE html>
   html{font-size:14px}
   body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased}
 
-  /* Layout */
-  .wrapper{width:100%;max-width:400px}
+  .wrapper{width:100%;max-width:440px}
   .logo-row{display:flex;align-items:center;gap:10px;margin-bottom:24px}
   .logo-row svg{flex-shrink:0}
   .logo-row .wordmark{font-size:18px;font-weight:700;letter-spacing:-.3px}
   .logo-row .badge{font-size:11px;font-weight:600;color:var(--primary);background:rgb(var(--brand)/.08);padding:2px 8px;border-radius:20px;margin-left:auto}
 
-  /* Card */
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:12px}
   .card h2{font-size:16px;font-weight:600;margin-bottom:4px}
   .card p.desc{font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.45}
 
-  /* Fields */
   .field{margin-bottom:14px}
   .field label{display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:5px;letter-spacing:.01em}
   .field .input-wrap{position:relative}
@@ -102,14 +101,12 @@ const HTML = `<!DOCTYPE html>
   .toggle-pw{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex}
   .toggle-pw:hover{color:var(--text-secondary)}
 
-  /* Segmented control */
   .seg{display:flex;background:var(--surface-2);border-radius:7px;padding:3px;gap:2px}
   .seg label{flex:1;text-align:center;padding:6px 0;font-size:12px;font-weight:500;border-radius:5px;cursor:pointer;color:var(--text-secondary);transition:all .15s;user-select:none}
   .seg input{display:none}
   .seg input:checked+span{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
   .seg label span{display:block;padding:6px 0;border-radius:5px;transition:all .15s}
 
-  /* Buttons */
   .btn-primary{
     width:100%;height:36px;margin-top:6px;background:var(--primary);color:#fff;border:none;border-radius:7px;
     font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:background .15s;
@@ -127,12 +124,11 @@ const HTML = `<!DOCTYPE html>
   .btn-danger{color:var(--danger);border-color:hsl(355 78% 60%/.25)}
   .btn-danger:hover{background:hsl(355 78% 60%/.06);border-color:var(--danger)}
 
-  /* Alerts */
   .alert{padding:10px 12px;border-radius:7px;font-size:12px;line-height:1.4;display:none;margin-top:12px}
   .alert.show{display:block}
   .alert-error{background:hsl(355 78% 60%/.07);border:1px solid hsl(355 78% 60%/.18);color:var(--danger)}
+  .alert-success{background:hsl(158 58% 45%/.07);border:1px solid hsl(158 58% 45%/.18);color:hsl(158 58% 45%)}
 
-  /* Session banner */
   .session{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;font-size:12px;margin-bottom:12px}
   .session .dot{width:7px;height:7px;border-radius:50%;background:var(--success);flex-shrink:0}
   .session .info{flex:1;color:var(--text-secondary)}
@@ -140,7 +136,6 @@ const HTML = `<!DOCTYPE html>
   .session button{background:none;border:none;color:var(--danger);font-size:12px;font-weight:500;cursor:pointer;padding:2px 6px;border-radius:4px}
   .session button:hover{background:hsl(355 78% 60%/.08)}
 
-  /* Success */
   .done-icon{width:48px;height:48px;border-radius:50%;background:hsl(158 58% 45%/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
   .done-icon svg{color:var(--success)}
   .done h2{text-align:center;margin-bottom:4px}
@@ -157,6 +152,15 @@ const HTML = `<!DOCTYPE html>
   .footer a{color:var(--primary);text-decoration:none}
   .footer a:hover{text-decoration:underline}
   .mt-12{margin-top:12px}
+  .mb-12{margin-bottom:12px}
+
+  .divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+  .section-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .section-label .tag{font-size:10px;font-weight:600;color:var(--text-muted);background:var(--surface-2);padding:2px 6px;border-radius:4px;text-transform:uppercase}
+  .hint{font-size:11px;color:var(--text-muted);margin-top:4px}
+  .svc-status{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:8px;padding:6px 10px;border-radius:6px;background:var(--surface-2)}
+  .svc-status .dot-on{width:6px;height:6px;border-radius:50%;background:var(--success)}
+  .svc-status .dot-off{width:6px;height:6px;border-radius:50%;background:var(--text-muted)}
 </style>
 </head>
 <body>
@@ -210,7 +214,48 @@ const HTML = `<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Step 2: Done -->
+  <!-- Step 2: Advanced Settings -->
+  <div class="step" id="step-advanced">
+    <div class="card">
+      <h2>Advanced Settings</h2>
+      <p class="desc">Optional services that unlock extra MCP tools. Skip any you don't need.</p>
+
+      <div class="section-label">Elasticsearch <span class="tag">Log Search</span></div>
+      <p class="hint mb-12">Enables search_logs, search_across_workflows, and keyword-based incident investigation.</p>
+      <div class="field">
+        <label for="es-endpoint">Elasticsearch Endpoint</label>
+        <input id="es-endpoint" type="text" placeholder="https://your-cluster.es.cloud.io" />
+      </div>
+      <div class="field">
+        <label for="es-api-key">Elasticsearch API Key</label>
+        <input id="es-api-key" type="text" placeholder="Base64-encoded API key" />
+      </div>
+      <div class="field">
+        <label for="es-index">Index Name <span style="color:var(--text-muted)">(optional)</span></label>
+        <input id="es-index" type="text" placeholder="search-workflow-executions" />
+      </div>
+
+      <hr class="divider" />
+
+      <div class="section-label">CRON Service <span class="tag">Scheduling</span></div>
+      <p class="hint mb-12">Enables cron job management, retry scheduling, and automated triggers.</p>
+      <div class="field">
+        <label for="cron-api-key">CRON API Key</label>
+        <input id="cron-api-key" type="text" placeholder="Your CRON service API key" />
+      </div>
+      <div class="field">
+        <label for="cron-base">CRON API Base <span style="color:var(--text-muted)">(optional)</span></label>
+        <input id="cron-base" type="text" placeholder="https://cron.laminar.run" />
+      </div>
+
+      <button class="btn-primary" id="btn-save-advanced" onclick="saveAdvanced()">Save &amp; Continue</button>
+      <button class="btn-ghost mt-12" onclick="skipAdvanced()">Skip — I'll configure later</button>
+      <div class="alert alert-success" id="advanced-ok"></div>
+      <div class="alert alert-error" id="advanced-error"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Done -->
   <div class="step" id="step-done">
     <div class="card done">
       <div class="done-icon">
@@ -218,6 +263,7 @@ const HTML = `<!DOCTYPE html>
       </div>
       <h2>Connected</h2>
       <p>Restart Cursor to activate the Laminar MCP server.</p>
+      <div id="svc-statuses" style="margin-bottom:14px"></div>
       <div class="code-block" id="config-preview"></div>
       <button class="btn-ghost mt-12" onclick="window.close()">Close</button>
     </div>
@@ -226,18 +272,30 @@ const HTML = `<!DOCTYPE html>
 
 <script>
 function togglePw(){const p=document.getElementById('password');p.type=p.type==='password'?'text':'password'}
-function showError(m){const e=document.getElementById('login-error');e.textContent=m;e.classList.add('show')}
+function showError(id,m){const e=document.getElementById(id);e.textContent=m;e.classList.add('show')}
+function clearAlerts(ids){ids.forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('show')})}
 
-// Session check
+let configPreview='';
+
 (async()=>{try{
   const r=await fetch('/api/status');const d=await r.json();
   if(d.hasSession){
     document.getElementById('session-banner').style.display='flex';
     document.getElementById('s-region').textContent=d.region;
     document.getElementById('s-expires').textContent=new Date(d.expiresAt).toLocaleString();
-    // Pre-select region
     if(d.apiBase&&d.apiBase.includes('ca.api')){
       document.querySelector('input[name="region"][value="ca.api.laminar.run"]').checked=true;
+    }
+  }
+  if(d.serviceConfig){
+    if(d.serviceConfig.elasticsearch){
+      document.getElementById('es-endpoint').value=d.serviceConfig.elasticsearch.endpoint||'';
+      document.getElementById('es-api-key').value=d.serviceConfig.elasticsearch.apiKey||'';
+      document.getElementById('es-index').value=d.serviceConfig.elasticsearch.indexName||'';
+    }
+    if(d.serviceConfig.cron){
+      document.getElementById('cron-api-key').value=d.serviceConfig.cron.apiKey||'';
+      document.getElementById('cron-base').value=d.serviceConfig.cron.apiBase||'';
     }
   }
 }catch{}})();
@@ -249,22 +307,65 @@ async function doLogout(){
 
 document.getElementById('login-form').addEventListener('submit',async(e)=>{
   e.preventDefault();
-  document.getElementById('login-error').classList.remove('show');
+  clearAlerts(['login-error']);
   const email=document.getElementById('email').value.trim();
   const password=document.getElementById('password').value;
-  const scope='global';
   const region=document.querySelector('input[name="region"]:checked').value;
-  if(!email||!password)return showError('Email and password are required.');
+  if(!email||!password)return showError('login-error','Email and password are required.');
   const btn=document.getElementById('btn-login');
-  btn.disabled=true;btn.innerHTML='<div class="spinner"></div>Signing in\u2026';
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div>Signing in\\u2026';
   try{
-    const r=await fetch('/api/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,scope,region})});
+    const r=await fetch('/api/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,region})});
     const d=await r.json();if(!r.ok)throw new Error(d.error||'Sign in failed');
-    document.getElementById('config-preview').textContent=d.configPreview;
+    configPreview=d.configPreview;
     document.getElementById('step-login').classList.remove('active');
-    document.getElementById('step-done').classList.add('active');
-  }catch(err){showError(err.message)}finally{btn.disabled=false;btn.textContent='Sign in'}
+    document.getElementById('step-advanced').classList.add('active');
+  }catch(err){showError('login-error',err.message)}finally{btn.disabled=false;btn.textContent='Sign in'}
 });
+
+async function saveAdvanced(){
+  clearAlerts(['advanced-error','advanced-ok']);
+  const esEndpoint=document.getElementById('es-endpoint').value.trim();
+  const esApiKey=document.getElementById('es-api-key').value.trim();
+  const esIndex=document.getElementById('es-index').value.trim();
+  const cronApiKey=document.getElementById('cron-api-key').value.trim();
+  const cronBase=document.getElementById('cron-base').value.trim();
+
+  const config={};
+  if(esEndpoint&&esApiKey){
+    config.elasticsearch={endpoint:esEndpoint,apiKey:esApiKey};
+    if(esIndex)config.elasticsearch.indexName=esIndex;
+  }
+  if(cronApiKey){
+    config.cron={apiKey:cronApiKey};
+    if(cronBase)config.cron.apiBase=cronBase;
+  }
+
+  const btn=document.getElementById('btn-save-advanced');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div>Saving\\u2026';
+  try{
+    const r=await fetch('/api/advanced',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Save failed');
+    goToDone(config);
+  }catch(err){showError('advanced-error',err.message)}finally{btn.disabled=false;btn.textContent='Save & Continue'}
+}
+
+function skipAdvanced(){goToDone({})}
+
+function goToDone(svcConfig){
+  document.getElementById('step-advanced').classList.remove('active');
+  document.getElementById('step-done').classList.add('active');
+  document.getElementById('config-preview').textContent=configPreview;
+
+  const statuses=document.getElementById('svc-statuses');
+  const items=[
+    {name:'Elasticsearch (Log Search)',on:!!svcConfig.elasticsearch},
+    {name:'CRON (Scheduling)',on:!!svcConfig.cron},
+  ];
+  statuses.innerHTML=items.map(i=>
+    '<div class="svc-status"><div class="'+(i.on?'dot-on':'dot-off')+'"></div>'+i.name+': '+(i.on?'Configured':'Not configured')+'</div>'
+  ).join('');
+}
 </script>
 </body>
 </html>`;
@@ -272,7 +373,7 @@ document.getElementById('login-form').addEventListener('submit',async(e)=>{
 // ─── Server ──────────────────────────────────────────────────
 
 async function startSetup() {
-  const server = http.createServer(async (req, res) => {
+  const srv = http.createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "*");
     res.setHeader("Access-Control-Allow-Methods", "*");
@@ -291,9 +392,20 @@ async function startSetup() {
 
       // ── Session status ──
       if (url.pathname === "/api/status" && req.method === "GET") {
+        let serviceConfig = null;
+        try {
+          if (fs.existsSync(CONFIG_PATH)) {
+            serviceConfig = JSON.parse(
+              fs.readFileSync(CONFIG_PATH, "utf-8")
+            );
+          }
+        } catch {}
+
         if (fs.existsSync(TOKEN_PATH)) {
           try {
-            const tokens = JSON.parse(fs.readFileSync(TOKEN_PATH, "utf-8"));
+            const tokens = JSON.parse(
+              fs.readFileSync(TOKEN_PATH, "utf-8")
+            );
             const apiBase: string =
               tokens.api_base || "https://api.laminar.run";
             const region = apiBase.includes("ca.api") ? "Canada" : "US";
@@ -302,10 +414,11 @@ async function startSetup() {
               region,
               apiBase,
               expiresAt: tokens.expires_at,
+              serviceConfig,
             });
           } catch {}
         }
-        return send(res, 200, { hasSession: false });
+        return send(res, 200, { hasSession: false, serviceConfig });
       }
 
       // ── Logout ──
@@ -333,7 +446,7 @@ async function startSetup() {
         return send(res, 200, { ok: true });
       }
 
-      // ── Connect ──
+      // ── Connect (auth) ──
       if (url.pathname === "/api/connect" && req.method === "POST") {
         const { email, password, region } = await jsonBody(req);
         const apiBase = `https://${region || "api.laminar.run"}`;
@@ -354,7 +467,6 @@ async function startSetup() {
           expires_in: number;
         };
 
-        // Store tokens
         const tokenDir = path.dirname(TOKEN_PATH);
         if (!fs.existsSync(tokenDir))
           fs.mkdirSync(tokenDir, { recursive: true });
@@ -374,7 +486,6 @@ async function startSetup() {
           { mode: 0o600 }
         );
 
-        // Write global Cursor MCP config
         const dotCursor = path.join(os.homedir(), ".cursor");
         if (!fs.existsSync(dotCursor))
           fs.mkdirSync(dotCursor, { recursive: true });
@@ -387,7 +498,10 @@ async function startSetup() {
           } catch {}
         }
         if (!existing.mcpServers) existing.mcpServers = {};
-        existing.mcpServers.laminar = { command: "node", args: [MCP_ENTRY] };
+        existing.mcpServers.laminar = {
+          command: "node",
+          args: [MCP_ENTRY],
+        };
 
         fs.writeFileSync(
           configPath,
@@ -396,17 +510,24 @@ async function startSetup() {
 
         console.log(`\n✓ Tokens stored at ${TOKEN_PATH}`);
         console.log(`✓ MCP config written to ${configPath}`);
-        console.log(
-          `\nRestart Cursor to activate the Laminar MCP server.\n`
-        );
 
         send(res, 200, {
           configPath,
           configPreview: JSON.stringify(existing, null, 2),
         });
+        return;
+      }
+
+      // ── Advanced settings (ES + CRON) ──
+      if (url.pathname === "/api/advanced" && req.method === "POST") {
+        const body = await jsonBody(req);
+        saveServiceConfig(body);
+        console.log(`✓ Service config saved to ${CONFIG_PATH}`);
+
+        send(res, 200, { ok: true });
 
         setTimeout(() => {
-          console.log("Setup complete.");
+          console.log("\nSetup complete. Restart Cursor to activate.\n");
           process.exit(0);
         }, 2000);
         return;
@@ -418,8 +539,8 @@ async function startSetup() {
     }
   });
 
-  server.listen(0, "127.0.0.1", () => {
-    const addr = server.address();
+  srv.listen(0, "127.0.0.1", () => {
+    const addr = srv.address();
     if (!addr || typeof addr === "string") {
       console.error("Failed to start server");
       process.exit(1);

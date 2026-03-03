@@ -239,7 +239,7 @@ export class LaminarClient {
       startDate?: string;
       endDate?: string;
       search?: string;
-      configurationId?: number;
+      configurationId?: number | string;
       status?: string;
       sortDirection?: string;
     }
@@ -324,7 +324,7 @@ export class LaminarClient {
     workflowId: number,
     body?: unknown,
     params?: {
-      configuration_id?: number;
+      configuration_id?: number | string;
       start_from_step?: number;
       end_at_step?: number;
     }
@@ -341,7 +341,7 @@ export class LaminarClient {
     workflowId: number,
     body?: unknown,
     params?: {
-      configuration_id?: number;
+      configuration_id?: number | string;
       start_from_step?: number;
       end_at_step?: number;
     }
