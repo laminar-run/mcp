@@ -9,22 +9,23 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
 import fs from "node:fs";
-import path from "node:path";
 import os from "node:os";
-import { LaminarClient, type LaminarAuth } from "./laminar-client.js";
-import { loadServiceConfig, CONFIG_PATH } from "./config.js";
-import { ElasticsearchService, CronService } from "./services.js";
+import path from "node:path";
+import { z } from "zod";
+import { loadServiceConfig } from "./config.js";
 import { computeDiff } from "./diff.js";
+import { generateInspectScript } from "./inspect-scripts.js";
+import { LaminarClient, type LaminarAuth } from "./laminar-client.js";
+import * as lds from "./lds-client.js";
+import { CronService, ElasticsearchService } from "./services.js";
 import {
-  pullWorkflow,
-  pushWorkflow,
-  syncStatus,
   initProject,
   pullAll,
+  pullWorkflow,
   pushChanged,
-  readManifest,
+  pushWorkflow,
+  syncStatus
 } from "./sync.js";
 
 const TOKEN_PATH = path.join(os.homedir(), ".laminar", "tokens.json");
@@ -66,7 +67,7 @@ function writeStoredTokens(tokens: StoredTokens) {
 }
 
 async function refreshAccessToken(
-  refreshToken: string
+  refreshToken: string,
 ): Promise<StoredTokens | null> {
   const base = getApiBase();
   try {
@@ -111,7 +112,7 @@ async function getValidToken(): Promise<string> {
   }
 
   console.error(
-    "Warning: Token expired and refresh failed. Run `npm run setup` to re-authenticate."
+    "Warning: Token expired and refresh failed. Run `npm run setup` to re-authenticate.",
   );
   return tokens.access_token;
 }
@@ -134,7 +135,7 @@ async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string }> {
   }
 
   console.error(
-    "No auth found. Run `npm run setup` to sign in, or set LAMINAR_API_KEY."
+    "No auth found. Run `npm run setup` to sign in, or set LAMINAR_API_KEY.",
   );
   process.exit(1);
 }
@@ -149,7 +150,7 @@ function scheduleTokenRefresh() {
 
   const msUntilRefresh = Math.max(
     tokens.expires_at - REFRESH_BUFFER_MS - Date.now(),
-    60_000
+    60_000,
   );
 
   setTimeout(async () => {
@@ -228,6 +229,30 @@ function requireCron() {
   return null;
 }
 
+// ─── VM / LDS session state ─────────────────────────────────
+
+interface LdsConnection {
+  url: string;
+  apiKey?: string;
+  serviceId?: string;
+}
+
+let ldsConnection: LdsConnection | null = null;
+
+const NOT_CONNECTED_VM = `No VM connected. Ask the user for their Cloudflare Tunnel URL for the Laminar Desktop Service, then call vm_connect.`;
+
+function requireVM() {
+  if (!ldsConnection) return text(NOT_CONNECTED_VM);
+  return null;
+}
+
+function ldsAuth(): lds.LdsAuth | undefined {
+  if (ldsConnection?.apiKey && ldsConnection?.serviceId) {
+    return { apiKey: ldsConnection.apiKey, serviceId: ldsConnection.serviceId };
+  }
+  return undefined;
+}
+
 // ─── Server ──────────────────────────────────────────────────
 
 const server = new McpServer({
@@ -245,7 +270,7 @@ server.tool(
   "get_current_user",
   "Get the current authenticated user info",
   {},
-  async () => safe(() => client.getMe())
+  async () => safe(() => client.getMe()),
 );
 
 // ── Workspaces ───────────────────────────────────────────────
@@ -254,22 +279,21 @@ server.tool(
   "list_workspaces",
   "List all workspaces the user has access to",
   {},
-  async () => safe(() => client.listWorkspaces())
+  async () => safe(() => client.listWorkspaces()),
 );
 
 server.tool(
   "get_workspace",
   "Get workspace details by ID",
   { workspaceId: z.number().describe("Workspace ID") },
-  async ({ workspaceId }) => safe(() => client.getWorkspace(workspaceId))
+  async ({ workspaceId }) => safe(() => client.getWorkspace(workspaceId)),
 );
 
 server.tool(
   "get_workspace_users",
   "List all users in a workspace",
   { workspaceId: z.number().describe("Workspace ID") },
-  async ({ workspaceId }) =>
-    safe(() => client.getWorkspaceUsers(workspaceId))
+  async ({ workspaceId }) => safe(() => client.getWorkspaceUsers(workspaceId)),
 );
 
 // ── Workflows ────────────────────────────────────────────────
@@ -278,7 +302,7 @@ server.tool(
   "list_workflows",
   "List all workflows in a workspace",
   { workspaceId: z.number().describe("Workspace ID") },
-  async ({ workspaceId }) => safe(() => client.listWorkflows(workspaceId))
+  async ({ workspaceId }) => safe(() => client.listWorkflows(workspaceId)),
 );
 
 server.tool(
@@ -286,14 +310,14 @@ server.tool(
   "List archived workflows in a workspace",
   { workspaceId: z.number().describe("Workspace ID") },
   async ({ workspaceId }) =>
-    safe(() => client.listArchivedWorkflows(workspaceId))
+    safe(() => client.listArchivedWorkflows(workspaceId)),
 );
 
 server.tool(
   "get_workflow",
   "Get workflow details including name, description, created date",
   { workflowId: z.number().describe("Workflow ID") },
-  async ({ workflowId }) => safe(() => client.getWorkflow(workflowId))
+  async ({ workflowId }) => safe(() => client.getWorkflow(workflowId)),
 );
 
 server.tool(
@@ -305,7 +329,7 @@ server.tool(
     description: z.string().describe("Workflow description"),
   },
   async ({ workspaceId, name, description }) =>
-    safe(() => client.createWorkflow({ workspaceId, name, description }))
+    safe(() => client.createWorkflow({ workspaceId, name, description })),
 );
 
 server.tool(
@@ -317,21 +341,21 @@ server.tool(
     description: z.string().optional().describe("New description"),
   },
   async ({ workflowId, name, description }) =>
-    safe(() => client.updateWorkflow({ workflowId, name, description }))
+    safe(() => client.updateWorkflow({ workflowId, name, description })),
 );
 
 server.tool(
   "delete_workflow",
   "Delete (archive) a workflow",
   { workflowId: z.number().describe("Workflow ID") },
-  async ({ workflowId }) => safe(() => client.deleteWorkflow(workflowId))
+  async ({ workflowId }) => safe(() => client.deleteWorkflow(workflowId)),
 );
 
 server.tool(
   "restore_workflow",
   "Restore a previously deleted/archived workflow",
   { workflowId: z.number().describe("Workflow ID") },
-  async ({ workflowId }) => safe(() => client.restoreWorkflow(workflowId))
+  async ({ workflowId }) => safe(() => client.restoreWorkflow(workflowId)),
 );
 
 server.tool(
@@ -346,7 +370,7 @@ server.tool(
       .describe("Target workspace ID (defaults to same workspace)"),
   },
   async ({ workflowId, name, workspaceId }) =>
-    safe(() => client.cloneWorkflow(workflowId, { name, workspaceId }))
+    safe(() => client.cloneWorkflow(workflowId, { name, workspaceId })),
 );
 
 // ── Flows (Steps) ────────────────────────────────────────────
@@ -355,27 +379,26 @@ server.tool(
   "list_workflow_flows",
   "List all flows/steps in a workflow, including their code",
   { workflowId: z.number().describe("Workflow ID") },
-  async ({ workflowId }) =>
-    safe(() => client.getWorkflowFlows(workflowId))
+  async ({ workflowId }) => safe(() => client.getWorkflowFlows(workflowId)),
 );
 
 server.tool(
   "get_flow",
   "Get a single flow/step details",
   { flowId: z.number().describe("Flow ID") },
-  async ({ flowId }) => safe(() => client.getFlow(flowId))
+  async ({ flowId }) => safe(() => client.getFlow(flowId)),
 );
 
 server.tool(
   "read_flow",
   "Read the program code of a flow/step",
   { flowId: z.number().describe("Flow ID") },
-  async ({ flowId }) => safe(() => client.readFlow(flowId))
+  async ({ flowId }) => safe(() => client.readFlow(flowId)),
 );
 
 server.tool(
   "create_flow",
-  "Create a new flow/step in a workflow. flowType: HTTP_REQUEST, GENERAL_FUNCTION, SHELL_SCRIPT, or RPA. language: js or py.",
+  "Create a new flow/step in a workflow. flowType: HTTP_REQUEST, GENERAL_FUNCTION, SHELL_SCRIPT, or RPA. language: js or py. For RPA flows: you MUST validate the script on the VM first (vm_execute_script + vm_screenshot) before saving it here.",
   {
     workflowId: z.number().describe("Workflow ID"),
     name: z.string().describe("Step name"),
@@ -383,7 +406,7 @@ server.tool(
     program: z
       .string()
       .describe(
-        'Program code. JS: (data) => { ... }  Python: def transform(data): ...'
+        "Program code. JS: (data) => { ... }  Python: def transform(data): ...",
       ),
     executionOrder: z.number().describe("Step position (starts at 1)"),
     language: z.enum(["js", "py"]).describe("Programming language"),
@@ -391,7 +414,7 @@ server.tool(
       .enum(["HTTP_REQUEST", "GENERAL_FUNCTION", "SHELL_SCRIPT", "RPA"])
       .describe("Flow type"),
   },
-  async (args) => safe(() => client.createFlow(args))
+  async (args) => safe(() => client.createFlow(args)),
 );
 
 server.tool(
@@ -409,12 +432,12 @@ server.tool(
           executionOrder: z.number(),
           language: z.string(),
           flowType: z.string(),
-        })
+        }),
       )
       .describe("Array of flow objects"),
   },
   async ({ workflowId, flows }) =>
-    safe(() => client.createOrUpdateFlows(workflowId, flows))
+    safe(() => client.createOrUpdateFlows(workflowId, flows)),
 );
 
 server.tool(
@@ -427,21 +450,21 @@ server.tool(
     program: z.string().optional().describe("New program code"),
     language: z.string().optional().describe("New language (js or py)"),
   },
-  async (args) => safe(() => client.updateFlow(args))
+  async (args) => safe(() => client.updateFlow(args)),
 );
 
 server.tool(
   "delete_flow",
   "Delete a flow/step from a workflow",
   { flowId: z.number().describe("Flow ID") },
-  async ({ flowId }) => safe(() => client.deleteFlow(flowId))
+  async ({ flowId }) => safe(() => client.deleteFlow(flowId)),
 );
 
 server.tool(
   "get_flow_versions",
   "Get version history of a flow/step",
   { flowId: z.number().describe("Flow ID") },
-  async ({ flowId }) => safe(() => client.getFlowVersions(flowId))
+  async ({ flowId }) => safe(() => client.getFlowVersions(flowId)),
 );
 
 server.tool(
@@ -452,7 +475,7 @@ server.tool(
     versionId: z.number().describe("Version ID"),
   },
   async ({ flowId, versionId }) =>
-    safe(() => client.readFlowVersion(flowId, versionId))
+    safe(() => client.readFlowVersion(flowId, versionId)),
 );
 
 // ── Executions ───────────────────────────────────────────────
@@ -464,21 +487,13 @@ server.tool(
     workflowId: z.number().describe("Workflow ID"),
     page: z.number().optional().describe("Page number (0-based, default 0)"),
     size: z.number().optional().describe("Page size (default 20)"),
-    startDate: z
-      .string()
-      .optional()
-      .describe("Filter: start date (ISO 8601)"),
-    endDate: z
-      .string()
-      .optional()
-      .describe("Filter: end date (ISO 8601)"),
+    startDate: z.string().optional().describe("Filter: start date (ISO 8601)"),
+    endDate: z.string().optional().describe("Filter: end date (ISO 8601)"),
     search: z.string().optional().describe("Search text"),
     status: z
       .string()
       .optional()
-      .describe(
-        "Filter: SUCCESS, FAILED, RUNNING, PENDING, SKIPPED, UNKNOWN"
-      ),
+      .describe("Filter: SUCCESS, FAILED, RUNNING, PENDING, SKIPPED, UNKNOWN"),
     configurationId: z
       .union([z.number(), z.string()])
       .optional()
@@ -489,7 +504,7 @@ server.tool(
       .describe("Sort direction (default desc)"),
   },
   async ({ workflowId, ...params }) =>
-    safe(() => client.listExecutions(workflowId, params))
+    safe(() => client.listExecutions(workflowId, params)),
 );
 
 server.tool(
@@ -500,7 +515,7 @@ server.tool(
     executionId: z.number().describe("Execution ID"),
   },
   async ({ workflowId, executionId }) =>
-    safe(() => client.getExecution(workflowId, executionId))
+    safe(() => client.getExecution(workflowId, executionId)),
 );
 
 server.tool(
@@ -511,7 +526,7 @@ server.tool(
     executionId: z.number().describe("Execution ID"),
   },
   async ({ workflowId, executionId }) =>
-    safe(() => client.getExecutionStatus(workflowId, executionId))
+    safe(() => client.getExecutionStatus(workflowId, executionId)),
 );
 
 server.tool(
@@ -522,7 +537,7 @@ server.tool(
     executionId: z.number().describe("Execution ID"),
   },
   async ({ workflowId, executionId }) =>
-    safe(() => client.getExecutionResult(workflowId, executionId))
+    safe(() => client.getExecutionResult(workflowId, executionId)),
 );
 
 server.tool(
@@ -533,7 +548,7 @@ server.tool(
     executionId: z.number().describe("Execution ID"),
   },
   async ({ workflowId, executionId }) =>
-    safe(() => client.getFullExecution(workflowId, executionId))
+    safe(() => client.getFullExecution(workflowId, executionId)),
 );
 
 server.tool(
@@ -544,7 +559,7 @@ server.tool(
     executionId: z.number().describe("Execution ID"),
   },
   async ({ workflowId, executionId }) =>
-    safe(() => client.getGlobalWorkflowObject(workflowId, executionId))
+    safe(() => client.getGlobalWorkflowObject(workflowId, executionId)),
 );
 
 server.tool(
@@ -556,9 +571,7 @@ server.tool(
     flowRunId: z.number().describe("Flow Run ID"),
   },
   async ({ workflowId, executionId, flowRunId }) =>
-    safe(() =>
-      client.getFlowRunResponse(workflowId, executionId, flowRunId)
-    )
+    safe(() => client.getFlowRunResponse(workflowId, executionId, flowRunId)),
 );
 
 server.tool(
@@ -571,8 +584,8 @@ server.tool(
   },
   async ({ workflowId, executionId, flowRunId }) =>
     safe(() =>
-      client.getFlowRunTransformation(workflowId, executionId, flowRunId)
-    )
+      client.getFlowRunTransformation(workflowId, executionId, flowRunId),
+    ),
 );
 
 server.tool(
@@ -584,9 +597,7 @@ server.tool(
     flowRunId: z.number().describe("Flow Run ID"),
   },
   async ({ workflowId, executionId, flowRunId }) =>
-    safe(() =>
-      client.getFlowRunProgram(workflowId, executionId, flowRunId)
-    )
+    safe(() => client.getFlowRunProgram(workflowId, executionId, flowRunId)),
 );
 
 // ── Execute ──────────────────────────────────────────────────
@@ -616,8 +627,8 @@ server.tool(
         configuration_id: configurationId,
         start_from_step: startFromStep,
         end_at_step: endAtStep,
-      })
-    )
+      }),
+    ),
 );
 
 server.tool(
@@ -645,8 +656,8 @@ server.tool(
         configuration_id: configurationId,
         start_from_step: startFromStep,
         end_at_step: endAtStep,
-      })
-    )
+      }),
+    ),
 );
 
 // ── Conversations ────────────────────────────────────────────
@@ -655,8 +666,7 @@ server.tool(
   "list_conversations",
   "List all AI conversations for a workflow",
   { workflowId: z.number().describe("Workflow ID") },
-  async ({ workflowId }) =>
-    safe(() => client.listConversations(workflowId))
+  async ({ workflowId }) => safe(() => client.listConversations(workflowId)),
 );
 
 server.tool(
@@ -667,9 +677,7 @@ server.tool(
     conversationId: z.number().describe("Conversation ID"),
   },
   async ({ workflowId, conversationId }) =>
-    safe(() =>
-      client.getConversationMessages(workflowId, conversationId)
-    )
+    safe(() => client.getConversationMessages(workflowId, conversationId)),
 );
 
 // ── Configuration Stores ─────────────────────────────────────
@@ -678,8 +686,7 @@ server.tool(
   "list_config_stores",
   "List all configuration stores in a workspace",
   { workspaceId: z.number().describe("Workspace ID") },
-  async ({ workspaceId }) =>
-    safe(() => client.listConfigStores(workspaceId))
+  async ({ workspaceId }) => safe(() => client.listConfigStores(workspaceId)),
 );
 
 server.tool(
@@ -690,7 +697,7 @@ server.tool(
     workspaceId: z.number().describe("Workspace ID"),
   },
   async ({ externalId, workspaceId }) =>
-    safe(() => client.getConfigStore(externalId, workspaceId))
+    safe(() => client.getConfigStore(externalId, workspaceId)),
 );
 
 server.tool(
@@ -701,7 +708,7 @@ server.tool(
     workspaceId: z.number().describe("Workspace ID"),
   },
   async ({ externalId, workspaceId }) =>
-    safe(() => client.getConfigProperties(externalId, workspaceId))
+    safe(() => client.getConfigProperties(externalId, workspaceId)),
 );
 
 server.tool(
@@ -713,7 +720,7 @@ server.tool(
     workspaceId: z.number().describe("Workspace ID"),
   },
   async ({ externalId, key, workspaceId }) =>
-    safe(() => client.getConfigProperty(externalId, key, workspaceId))
+    safe(() => client.getConfigProperty(externalId, key, workspaceId)),
 );
 
 server.tool(
@@ -727,8 +734,8 @@ server.tool(
   },
   async ({ externalId, workspaceId, key, value }) =>
     safe(() =>
-      client.updateConfigProperty(externalId, workspaceId, { key, value })
-    )
+      client.updateConfigProperty(externalId, workspaceId, { key, value }),
+    ),
 );
 
 server.tool(
@@ -740,9 +747,7 @@ server.tool(
     workspaceId: z.number().describe("Workspace ID"),
   },
   async ({ externalId, key, workspaceId }) =>
-    safe(() =>
-      client.removeConfigProperty(externalId, key, workspaceId)
-    )
+    safe(() => client.removeConfigProperty(externalId, key, workspaceId)),
 );
 
 server.tool(
@@ -759,11 +764,11 @@ server.tool(
         z.object({
           key: z.string().describe("Property key"),
           value: z.string().describe("Property value"),
-        })
+        }),
       )
       .describe("Initial properties"),
   },
-  async (args) => safe(() => client.createConfigStore(args))
+  async (args) => safe(() => client.createConfigStore(args)),
 );
 
 server.tool(
@@ -774,7 +779,7 @@ server.tool(
     workspaceId: z.number().describe("Workspace ID"),
   },
   async ({ externalId, workspaceId }) =>
-    safe(() => client.deleteConfigStore(externalId, workspaceId))
+    safe(() => client.deleteConfigStore(externalId, workspaceId)),
 );
 
 server.tool(
@@ -785,7 +790,7 @@ server.tool(
     workspaceId: z.number().describe("Workspace ID"),
   },
   async ({ externalId, workspaceId }) =>
-    safe(() => client.restoreConfigStore(externalId, workspaceId))
+    safe(() => client.restoreConfigStore(externalId, workspaceId)),
 );
 
 // ── Issues ───────────────────────────────────────────────────
@@ -794,7 +799,7 @@ server.tool(
   "list_issues",
   "List all issues in a workspace",
   { workspaceId: z.number().describe("Workspace ID") },
-  async ({ workspaceId }) => safe(() => client.listIssues(workspaceId))
+  async ({ workspaceId }) => safe(() => client.listIssues(workspaceId)),
 );
 
 server.tool(
@@ -805,7 +810,7 @@ server.tool(
     issueId: z.number().describe("Issue ID"),
   },
   async ({ workspaceId, issueId }) =>
-    safe(() => client.getIssue(workspaceId, issueId))
+    safe(() => client.getIssue(workspaceId, issueId)),
 );
 
 server.tool(
@@ -826,8 +831,8 @@ server.tool(
         title,
         description,
         assignedUserId,
-      })
-    )
+      }),
+    ),
 );
 
 server.tool(
@@ -845,7 +850,7 @@ server.tool(
     assignedUserId: z.number().optional().describe("New assignee user ID"),
   },
   async ({ workspaceId, issueId, ...data }) =>
-    safe(() => client.updateIssue(workspaceId, issueId, data))
+    safe(() => client.updateIssue(workspaceId, issueId, data)),
 );
 
 server.tool(
@@ -856,7 +861,7 @@ server.tool(
     issueId: z.number().describe("Issue ID"),
   },
   async ({ workspaceId, issueId }) =>
-    safe(() => client.deleteIssue(workspaceId, issueId))
+    safe(() => client.deleteIssue(workspaceId, issueId)),
 );
 
 // ── Stats ────────────────────────────────────────────────────
@@ -872,7 +877,7 @@ server.tool(
       .describe("Number of days to look back (default 7)"),
   },
   async ({ workspaceId, days }) =>
-    safe(() => client.getFlowStats(workspaceId, days))
+    safe(() => client.getFlowStats(workspaceId, days)),
 );
 
 server.tool(
@@ -883,14 +888,14 @@ server.tool(
     limit: z.number().optional().describe("Max results (default 10)"),
   },
   async ({ workspaceId, limit }) =>
-    safe(() => client.getRecentFlowRuns(workspaceId, limit))
+    safe(() => client.getRecentFlowRuns(workspaceId, limit)),
 );
 
 server.tool(
   "list_api_keys",
   "List API keys in a workspace",
   { workspaceId: z.number().describe("Workspace ID") },
-  async ({ workspaceId }) => safe(() => client.listApiKeys(workspaceId))
+  async ({ workspaceId }) => safe(() => client.listApiKeys(workspaceId)),
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -933,7 +938,7 @@ server.tool(
 
       if (proposedDescription && proposedDescription !== flow.description) {
         lines.push(
-          `### Description: ${flow.description} → ${proposedDescription}`
+          `### Description: ${flow.description} → ${proposedDescription}`,
         );
         lines.push("");
       }
@@ -947,7 +952,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -976,15 +981,12 @@ server.tool(
             const code = await client.readFlow(f.id);
             return {
               ...f,
-              code:
-                typeof code === "string"
-                  ? code
-                  : JSON.stringify(code),
+              code: typeof code === "string" ? code : JSON.stringify(code),
             };
           } catch {
             return { ...f, code: "(could not read)" };
           }
-        })
+        }),
       );
 
       return ok({
@@ -1003,7 +1005,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1011,9 +1013,7 @@ server.tool(
   "Get the input data from a specific execution, so you can reuse it to test the workflow again. Returns data.input from the first step.",
   {
     workflowId: z.number().describe("Workflow ID"),
-    executionId: z
-      .number()
-      .describe("Execution ID to get input from"),
+    executionId: z.number().describe("Execution ID to get input from"),
   },
   async ({ workflowId, executionId }) => {
     try {
@@ -1058,7 +1058,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1067,14 +1067,16 @@ server.tool(
   {
     workflowId: z.number().describe("Workflow ID"),
     step: z.number().describe("Step number to test"),
-    mode: z.enum(["up_to", "single", "from"]).describe(
-      "up_to: run steps 1..N, single: run only step N, from: run steps N..end"
-    ),
+    mode: z
+      .enum(["up_to", "single", "from"])
+      .describe(
+        "up_to: run steps 1..N, single: run only step N, from: run steps N..end",
+      ),
     body: z
       .any()
       .optional()
       .describe(
-        "Input data (JSON). Use get_execution_input to grab from a previous run."
+        "Input data (JSON). Use get_execution_input to grab from a previous run.",
       ),
     configurationId: z
       .union([z.number(), z.string()])
@@ -1098,7 +1100,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1110,9 +1112,7 @@ server.tool(
       .number()
       .optional()
       .describe("First version ID (omit for current)"),
-    versionB: z
-      .number()
-      .describe("Second version ID to compare against"),
+    versionB: z.number().describe("Second version ID to compare against"),
   },
   async ({ flowId, versionA, versionB }) => {
     try {
@@ -1124,24 +1124,20 @@ server.tool(
       ]);
 
       const strA =
-        typeof codeA === "string"
-          ? codeA
-          : JSON.stringify(codeA, null, 2);
+        typeof codeA === "string" ? codeA : JSON.stringify(codeA, null, 2);
       const strB =
-        typeof codeB === "string"
-          ? codeB
-          : JSON.stringify(codeB, null, 2);
+        typeof codeB === "string" ? codeB : JSON.stringify(codeB, null, 2);
 
       const labelA = versionA ? `Version ${versionA}` : "Current";
       const labelB = `Version ${versionB}`;
 
       return text(
-        `## Flow ${flowId}: ${labelA} vs ${labelB}\n\n\`\`\`diff\n${computeDiff(strA, strB, labelA, labelB)}\n\`\`\``
+        `## Flow ${flowId}: ${labelA} vs ${labelB}\n\n\`\`\`diff\n${computeDiff(strA, strB, labelA, labelB)}\n\`\`\``,
       );
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1149,18 +1145,14 @@ server.tool(
   "Analyze a workflow execution to find failures. Returns failed steps with their errors, the preceding step's output (context), input data, and code.",
   {
     workflowId: z.number().describe("Workflow ID"),
-    executionId: z
-      .number()
-      .describe("Execution ID to diagnose"),
+    executionId: z.number().describe("Execution ID to diagnose"),
   },
   async ({ workflowId, executionId }) => {
     try {
       const exec = await client.getExecution(workflowId, executionId);
       const flowRuns: any[] = exec?.flowRuns || [];
 
-      const failures = flowRuns.filter(
-        (r: any) => r.status === "FAILED"
-      );
+      const failures = flowRuns.filter((r: any) => r.status === "FAILED");
 
       if (failures.length === 0) {
         const summary = flowRuns.map((r: any) => ({
@@ -1180,8 +1172,7 @@ server.tool(
       const details = failures.map((r: any) => {
         const prevStep = flowRuns.find(
           (p: any) =>
-            p.executionOrder === r.executionOrder - 1 &&
-            p.status === "SUCCESS"
+            p.executionOrder === r.executionOrder - 1 && p.status === "SUCCESS",
         );
 
         return {
@@ -1213,7 +1204,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1229,7 +1220,7 @@ server.tool(
       .string()
       .optional()
       .describe(
-        "Search text. Supports field:value syntax, wildcards, boolean operators, exact phrases in quotes."
+        "Search text. Supports field:value syntax, wildcards, boolean operators, exact phrases in quotes.",
       ),
     workflowId: z
       .string()
@@ -1253,7 +1244,7 @@ server.tool(
       .boolean()
       .optional()
       .describe(
-        "Also search global workflow object — slower but more thorough"
+        "Also search global workflow object — slower but more thorough",
       ),
     rawQuery: z
       .string()
@@ -1271,7 +1262,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1282,23 +1273,28 @@ server.tool(
     query: z
       .string()
       .describe(
-        "What to search for (order ID, error message, entity name, etc.)"
+        "What to search for (order ID, error message, entity name, etc.)",
       ),
     workflowIds: z
       .array(z.string())
       .optional()
       .describe(
-        "Specific workflow IDs to search (omit to search ALL workflows)"
+        "Specific workflow IDs to search (omit to search ALL workflows)",
       ),
     startDate: z.string().optional().describe("Start of time range (ISO 8601)"),
     endDate: z.string().optional().describe("End of time range (ISO 8601)"),
-    status: z
-      .string()
-      .optional()
-      .describe("Filter by status (e.g., FAILED)"),
+    status: z.string().optional().describe("Filter by status (e.g., FAILED)"),
     size: z.number().optional().describe("Max results (default 50)"),
   },
-  async ({ workspaceId, query, workflowIds, startDate, endDate, status, size }) => {
+  async ({
+    workspaceId,
+    query,
+    workflowIds,
+    startDate,
+    endDate,
+    status,
+    size,
+  }) => {
     const blocked = requireES();
     if (blocked) return blocked;
     try {
@@ -1333,7 +1329,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1341,9 +1337,7 @@ server.tool(
   "Investigate an incident across workflows. Finds all failures in a time window, correlates by shared data, and produces a timeline. Works with or without Elasticsearch — ES gives full-text search, without ES falls back to API-based execution listing.",
   {
     workspaceId: z.number().describe("Workspace ID"),
-    workflowIds: z
-      .array(z.number())
-      .describe("Workflow IDs to investigate"),
+    workflowIds: z.array(z.number()).describe("Workflow IDs to investigate"),
     startDate: z
       .string()
       .optional()
@@ -1355,13 +1349,8 @@ server.tool(
     keywords: z
       .array(z.string())
       .optional()
-      .describe(
-        "Search terms to correlate (order IDs, error messages, etc.)"
-      ),
-    status: z
-      .string()
-      .optional()
-      .describe("Filter status (default: FAILED)"),
+      .describe("Search terms to correlate (order IDs, error messages, etc.)"),
+    status: z.string().optional().describe("Filter status (default: FAILED)"),
   },
   async ({
     workspaceId,
@@ -1387,7 +1376,7 @@ server.tool(
             size: 20,
             fuzzy: true,
             includeGlobalObject: true,
-          })
+          }),
         );
 
         const searchResults = await Promise.all(searchPromises);
@@ -1409,7 +1398,7 @@ server.tool(
         allHits.sort(
           (a, b) =>
             new Date(a.startedAt || 0).getTime() -
-            new Date(b.startedAt || 0).getTime()
+            new Date(b.startedAt || 0).getTime(),
         );
 
         return ok({
@@ -1449,25 +1438,22 @@ server.tool(
               });
             }
           } catch {}
-        })
+        }),
       );
 
       allExecs.sort(
         (a, b) =>
           new Date(a.startedAt || 0).getTime() -
-          new Date(b.startedAt || 0).getTime()
+          new Date(b.startedAt || 0).getTime(),
       );
 
       // Diagnose each failed execution
       const diagnosed = await Promise.all(
         allExecs.slice(0, 10).map(async (exec) => {
           try {
-            const full = await client.getExecution(
-              exec.workflowId,
-              exec.id
-            );
+            const full = await client.getExecution(exec.workflowId, exec.id);
             const failedSteps = (full.flowRuns || []).filter(
-              (r: any) => r.status === "FAILED"
+              (r: any) => r.status === "FAILED",
             );
             return {
               time: exec.startedAt,
@@ -1495,7 +1481,7 @@ server.tool(
               failedSteps: [],
             };
           }
-        })
+        }),
       );
 
       return ok({
@@ -1507,7 +1493,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1527,7 +1513,7 @@ server.tool(
     const blocked = requireCron();
     if (blocked) return blocked;
     return safe(() => cronService!.listJobs(workflowId));
-  }
+  },
 );
 
 server.tool(
@@ -1538,7 +1524,7 @@ server.tool(
     const blocked = requireCron();
     if (blocked) return blocked;
     return safe(() => cronService!.getJob(jobId));
-  }
+  },
 );
 
 server.tool(
@@ -1552,16 +1538,13 @@ server.tool(
     url: z
       .string()
       .describe(
-        "Workflow execution URL (e.g., https://api.laminar.run/workflow/execute/external/{id}?api_key=...)"
+        "Workflow execution URL (e.g., https://api.laminar.run/workflow/execute/external/{id}?api_key=...)",
       ),
     body: z
       .record(z.string(), z.any())
       .optional()
       .describe("JSON body to send with each execution"),
-    enabled: z
-      .boolean()
-      .optional()
-      .describe("Start enabled (default true)"),
+    enabled: z.boolean().optional().describe("Start enabled (default true)"),
     maxRuns: z
       .number()
       .optional()
@@ -1578,9 +1561,9 @@ server.tool(
         body,
         enabled: enabled ?? true,
         max_runs: maxRuns,
-      })
+      }),
     );
-  }
+  },
 );
 
 server.tool(
@@ -1591,17 +1574,14 @@ server.tool(
     name: z.string().optional().describe("New name"),
     schedule: z.string().optional().describe("New CRON schedule"),
     url: z.string().optional().describe("New execution URL"),
-    body: z
-      .record(z.string(), z.any())
-      .optional()
-      .describe("New JSON body"),
+    body: z.record(z.string(), z.any()).optional().describe("New JSON body"),
     enabled: z.boolean().optional().describe("Enable or disable"),
   },
   async ({ jobId, ...updates }) => {
     const blocked = requireCron();
     if (blocked) return blocked;
     return safe(() => cronService!.updateJob(jobId, updates));
-  }
+  },
 );
 
 server.tool(
@@ -1612,7 +1592,7 @@ server.tool(
     const blocked = requireCron();
     if (blocked) return blocked;
     return safe(() => cronService!.toggleJob(jobId));
-  }
+  },
 );
 
 server.tool(
@@ -1628,7 +1608,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1644,7 +1624,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1652,15 +1632,11 @@ server.tool(
   "Schedule automatic retries for a failed workflow execution. Creates a temporary CRON job that re-runs the workflow with the original input. Requires CRON service.",
   {
     workflowId: z.number().describe("Workflow ID"),
-    executionId: z
-      .number()
-      .describe("Failed execution ID to retry"),
+    executionId: z.number().describe("Failed execution ID to retry"),
     schedule: z
       .string()
       .optional()
-      .describe(
-        "CRON schedule (default: every 30 min — '0 */30 * * * *')"
-      ),
+      .describe("CRON schedule (default: every 30 min — '0 */30 * * * *')"),
     maxAttempts: z
       .number()
       .optional()
@@ -1668,16 +1644,10 @@ server.tool(
     executionUrl: z
       .string()
       .describe(
-        "Workflow execution URL with API key (e.g., https://api.laminar.run/workflow/execute/external/{id}?api_key=...)"
+        "Workflow execution URL with API key (e.g., https://api.laminar.run/workflow/execute/external/{id}?api_key=...)",
       ),
   },
-  async ({
-    workflowId,
-    executionId,
-    schedule,
-    maxAttempts,
-    executionUrl,
-  }) => {
+  async ({ workflowId, executionId, schedule, maxAttempts, executionUrl }) => {
     const blocked = requireCron();
     if (blocked) return blocked;
     try {
@@ -1726,7 +1696,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1741,12 +1711,14 @@ server.tool(
     outputDir: z
       .string()
       .describe(
-        "Directory to create the project in (e.g., /Users/you/my-laminar-workflows)"
+        "Directory to create the project in (e.g., /Users/you/my-laminar-workflows)",
       ),
     workflowIds: z
       .array(z.number())
       .optional()
-      .describe("Specific workflow IDs to include (omit to pull ALL workflows)"),
+      .describe(
+        "Specific workflow IDs to include (omit to pull ALL workflows)",
+      ),
   },
   async ({ workspaceId, outputDir, workflowIds }) => {
     try {
@@ -1769,7 +1741,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1780,7 +1752,7 @@ server.tool(
     outputDir: z
       .string()
       .describe(
-        "Local directory to write files to (e.g., ./workflows/my-workflow)"
+        "Local directory to write files to (e.g., ./workflows/my-workflow)",
       ),
   },
   async ({ workflowId, outputDir }) => {
@@ -1794,7 +1766,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1803,15 +1775,11 @@ server.tool(
   {
     workflowDir: z
       .string()
-      .describe(
-        "Local directory containing workflow.json and steps/ folder"
-      ),
+      .describe("Local directory containing workflow.json and steps/ folder"),
     workflowId: z
       .number()
       .optional()
-      .describe(
-        "Target workflow ID (overrides ID in workflow.json)"
-      ),
+      .describe("Target workflow ID (overrides ID in workflow.json)"),
   },
   async ({ workflowDir, workflowId }) => {
     try {
@@ -1821,7 +1789,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1830,14 +1798,12 @@ server.tool(
   {
     workflowDir: z
       .string()
-      .describe(
-        "Local directory containing workflow.json and steps/ folder"
-      ),
+      .describe("Local directory containing workflow.json and steps/ folder"),
     workflowId: z
       .number()
       .optional()
       .describe(
-        "Workflow ID to compare against (overrides ID in workflow.json)"
+        "Workflow ID to compare against (overrides ID in workflow.json)",
       ),
   },
   async ({ workflowDir, workflowId }) => {
@@ -1848,7 +1814,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1867,7 +1833,7 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
 );
 
 server.tool(
@@ -1886,7 +1852,267 @@ server.tool(
     } catch (e: any) {
       return text(`Error: ${e.message}`);
     }
-  }
+  },
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  VM / LAMINAR DESKTOP SERVICE (session-based — user provides Cloudflare Tunnel URL at runtime)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Connection Management ────────────────────────────────────
+
+server.tool(
+  "vm_connect",
+  "Connect to a Laminar Desktop Service running on a VM via its Cloudflare Tunnel URL. Call this before using any other vm_* tools. The URL is stored for the duration of this session.",
+  {
+    url: z
+      .string()
+      .describe(
+        "Cloudflare Tunnel URL for the Laminar Desktop Service (e.g. https://xxx.trycloudflare.com)",
+      ),
+    apiKey: z
+      .string()
+      .optional()
+      .describe("LDS API key (only needed if the LDS instance requires auth)"),
+    serviceId: z
+      .string()
+      .optional()
+      .describe(
+        "LDS Service ID (only needed if the LDS instance requires auth)",
+      ),
+  },
+  async ({ url, apiKey, serviceId }) => {
+    try {
+      const h = await lds.health(url);
+      ldsConnection = { url, apiKey, serviceId };
+      return ok({
+        connected: true,
+        url,
+        version: h.version,
+        uptime: h.uptime,
+        status: h.status,
+        authConfigured: !!(apiKey && serviceId),
+      });
+    } catch (e: any) {
+      ldsConnection = null;
+      return text(`Failed to connect to LDS at ${url}: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "vm_disconnect",
+  "Disconnect from the current VM / Laminar Desktop Service session",
+  {},
+  async () => {
+    const wasConnected = !!ldsConnection;
+    const prevUrl = ldsConnection?.url;
+    ldsConnection = null;
+    return text(
+      wasConnected ? `Disconnected from ${prevUrl}` : "No VM was connected.",
+    );
+  },
+);
+
+server.tool(
+  "vm_status",
+  "Show current VM connection status (URL, connected or not)",
+  {},
+  async () => {
+    if (!ldsConnection) return text(NOT_CONNECTED_VM);
+    try {
+      const h = await lds.health(ldsConnection.url);
+      return ok({
+        connected: true,
+        url: ldsConnection.url,
+        authConfigured: !!(ldsConnection.apiKey && ldsConnection.serviceId),
+        lds: h,
+      });
+    } catch (e: any) {
+      return ok({
+        connected: true,
+        url: ldsConnection.url,
+        reachable: false,
+        error: e.message,
+      });
+    }
+  },
+);
+
+// ── Core VM Tools ────────────────────────────────────────────
+
+server.tool(
+  "vm_screenshot",
+  "Capture a screenshot of the VM desktop. Returns the image as base64 PNG with metadata (width, height, capture duration).",
+  {},
+  async () => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const res = await lds.screenshot(ldsConnection!.url, ldsAuth());
+      return {
+        content: [
+          {
+            type: "image" as const,
+            data: res.image,
+            mimeType: "image/png" as const,
+          },
+          {
+            type: "text" as const,
+            text: json({
+              width: res.metadata.width,
+              height: res.metadata.height,
+              size_bytes: res.metadata.size_bytes,
+              capture_duration_ms: res.metadata.capture_duration_ms,
+              timestamp: res.metadata.timestamp,
+            }),
+          },
+        ],
+      };
+    } catch (e: any) {
+      return text(`Screenshot failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "vm_execute_script",
+  "Execute a Python script on the VM desktop via the Laminar Desktop Service. The script runs with full desktop access (pyautogui, uiautomation, etc.). The user will review the script before it executes. IMPORTANT: When building RPA workflows, you MUST call this to validate every script on the VM, then call vm_screenshot to verify the result, BEFORE saving the step with create_flow.",
+  {
+    script: z.string().describe("Python script to execute on the VM"),
+    executionId: z.string().optional().describe("Execution ID for tracking"),
+    flowId: z.string().optional().describe("Flow/workflow ID for tracking"),
+  },
+  async ({ script, executionId, flowId }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const res = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { executionId, flowId },
+        ldsAuth(),
+      );
+      return ok({
+        success: res.success,
+        exitCode: res.exitCode,
+        stdout: res.stdout,
+        stderr: res.stderr,
+        executionTimeMs: res.executionTimeMs,
+        skipped: res.skipped,
+        stopped: res.stopped,
+        resultData: res.resultData,
+      });
+    } catch (e: any) {
+      return text(`Script execution failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "vm_execution_status",
+  "Get the current execution state on the VM (idle, running, paused, stopped, completed, failed)",
+  {},
+  async () => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    return safe(() => lds.executionStatus(ldsConnection!.url, ldsAuth()));
+  },
+);
+
+server.tool(
+  "vm_execution_control",
+  "Send a control command to the currently running execution on the VM",
+  {
+    command: z
+      .enum(["pause", "resume", "stop", "skip"])
+      .describe("Control command to send"),
+  },
+  async ({ command }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    return safe(() => lds.executionControl(ldsConnection!.url, command, ldsAuth()));
+  },
+);
+
+// ── UI Inspection ────────────────────────────────────────────
+
+server.tool(
+  "vm_inspect_ui",
+  "Inspect UI elements on the VM desktop. Generates and executes the appropriate inspection script for the chosen framework. Use this to understand what is on screen, get element coordinates, and map the UI tree before writing RPA scripts.",
+  {
+    mode: z
+      .enum([
+        "window_list",
+        "screen_info",
+        "element_at_point",
+        "element_tree",
+        "focused_element",
+      ])
+      .describe(
+        "window_list: list visible windows. screen_info: resolution/DPI/active window. element_at_point: inspect element at x,y. element_tree: accessibility tree for a window. focused_element: currently focused control.",
+      ),
+    x: z
+      .number()
+      .optional()
+      .describe("X coordinate (for element_at_point mode)"),
+    y: z
+      .number()
+      .optional()
+      .describe("Y coordinate (for element_at_point mode)"),
+    windowTitle: z
+      .string()
+      .optional()
+      .describe(
+        "Window title to inspect (for element_tree mode; omit to use the foreground window)",
+      ),
+    framework: z
+      .enum(["auto", "uiautomation", "pywinauto", "jab"])
+      .optional()
+      .describe(
+        "UI automation framework to use. auto (default) uses uiautomation. Use jab for Java/Swing apps, pywinauto for an alternative Windows UI backend.",
+      ),
+    depth: z
+      .number()
+      .optional()
+      .describe(
+        "Max depth for element_tree traversal (default 3). Keep low to avoid huge output.",
+      ),
+  },
+  async ({ mode, x, y, windowTitle, framework, depth }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const script = generateInspectScript({
+        mode,
+        x,
+        y,
+        windowTitle,
+        framework: framework ?? "auto",
+        depth,
+      });
+      const res = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { flowId: `inspect-${mode}` },
+        ldsAuth(),
+      );
+      if (!res.success) {
+        return text(
+          `Inspection failed (exit ${res.exitCode}):\n${res.stderr || res.stdout}`,
+        );
+      }
+      // Try to parse stdout as JSON for clean output
+      try {
+        const parsed = JSON.parse(res.stdout);
+        return ok(parsed);
+      } catch {
+        return text(res.stdout);
+      }
+    } catch (e: any) {
+      return text(`Inspection failed: ${e.message}`);
+    }
+  },
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1980,6 +2206,62 @@ Multiple requests: use \`"lam.httpRequests"\` (plural) with an array.
 }
 \`\`\`
 
+### RPA (Desktop Automation)
+RPA flows MUST use \`language: "js"\`. The Python script is embedded as a JS template literal string inside a JS arrow function. There are two dispatch patterns:
+
+**Option A — \`lam.rpa\` with channelId** (when the workspace uses a persistent channel, no tunnel URL):
+\`\`\`javascript
+(data) => {
+  const pythonScript = \\\`
+# ... your validated Python RPA script ...
+\\\`;
+  return {
+    "lam.rpa": {
+      "script": pythonScript,
+      "channelId": "{{config.channelId}}"
+    }
+  };
+}
+\`\`\`
+
+**Option B — \`lam.httpRequest\` to Cloudflare Tunnel** (when a tunnel URL was provided via \`vm_connect\`):
+\`\`\`javascript
+(data) => {
+  const pythonScript = \\\`
+# ... your validated Python RPA script ...
+\\\`;
+  return {
+    "lam.httpRequest": {
+      "method": "POST",
+      "url": "{{config.laminar_desktop_service_url}}/execute",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-API-Key": "{{config.laminar_desktop_service_api_key}}",
+        "X-Service-ID": "{{config.laminar_desktop_service_id}}"
+      },
+      "body": {
+        "flowId": "rpa-step-id",
+        "script": pythonScript,
+        "executionId": "1",
+        "step": {
+          "id": "step-1",
+          "name": "Step Name",
+          "description": "Step description.",
+          "versionId": "v1.0"
+        }
+      }
+    }
+  };
+}
+\`\`\`
+
+**When to use which:**
+- If a Cloudflare Tunnel URL was provided (via \`vm_connect\`), default to Option B (\`lam.httpRequest\`).
+- If the workspace uses a channelId (no tunnel), use Option A (\`lam.rpa\`).
+- Ask the user if unclear.
+
+**NEVER** save raw Python as the program for an RPA flow. It must ALWAYS be a JavaScript arrow function returning \`lam.rpa\` or \`lam.httpRequest\`.
+
 ### Configuration Updates
 \`\`\`json
 {
@@ -2057,7 +2339,7 @@ Use \`{{config.variableName}}\` for sensitive values (API keys, tokens, password
         },
       },
     ],
-  })
+  }),
 );
 
 server.prompt(
@@ -2109,7 +2391,170 @@ Analyze the execution, identify failures, explain root causes, and suggest speci
         },
       ],
     };
+  },
+);
+
+server.prompt(
+  "build-rpa-workflow",
+  "Iteratively build an RPA workflow on a VM using the Laminar Desktop Service. Guides you through connecting to the VM, researching the target app's UI framework, taking screenshots, inspecting UI elements, writing and testing RPA scripts, and saving each working step as a Laminar workflow flow.",
+  {
+    workspaceId: z.string().describe("Laminar workspace ID"),
+    task: z
+      .string()
+      .describe(
+        "Description of what to automate (e.g. 'Log into Centricity, navigate to Documents, download the latest report')",
+      ),
+    appName: z
+      .string()
+      .describe(
+        "Name of the application to automate (e.g. 'Centricity', 'SAP GUI', 'Epic Hyperspace')",
+      ),
+    workflowId: z
+      .string()
+      .optional()
+      .describe(
+        "Existing workflow ID to add steps to (omit to create a new workflow)",
+      ),
+  },
+  async ({ workspaceId, task, appName, workflowId }) => ({
+    messages: [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: `You are building an RPA workflow on the Laminar platform. Your goal is to iteratively create automation steps that run on a VM via the Laminar Desktop Service (LDS).
+
+## Task
+${task}
+
+## Target Application
+${appName}
+
+## Workspace
+ID: ${workspaceId}${workflowId ? `\nExisting workflow ID: ${workflowId} (add steps to this workflow)` : "\nCreate a new workflow for this automation."}
+
+## CRITICAL RULE — MANDATORY VALIDATION
+
+**NEVER save a step to the Laminar workflow without first validating it on the VM.** Every single RPA script MUST go through this exact sequence before being saved:
+
+1. \`vm_execute_script\` — run the script on the VM
+2. \`vm_screenshot\` — visually confirm the action produced the expected result
+3. Only if BOTH succeed → save via \`create_flow\`
+
+If validation fails, fix the script and re-run this sequence. Do NOT skip validation unless the user explicitly says to. This is non-negotiable.
+
+## Procedure
+
+### 1. Connect to the VM
+If no VM is connected, ask the user for their **Cloudflare Tunnel URL** for the Laminar Desktop Service. Then call \`vm_connect\` with that URL.
+
+### 2. Research the Target Application
+Based on the app name "${appName}", determine which UI automation framework to use:
+- **.NET / WPF / WinForms apps** → \`uiautomation\` (default) or \`pywinauto\`
+- **Java / Swing apps** → \`jab\` (Java Access Bridge)
+- **Electron / web-based desktop apps** → \`pywinauto\` or direct keyboard/mouse with pyautogui
+- **Legacy Win32 apps** → \`uiautomation\`
+
+If unsure, start with \`uiautomation\` and switch if inspection fails. Ask the user if you need clarification about the app or its technology stack.
+
+### 3. Initial Survey (ALWAYS do this first)
+You MUST perform all of these before writing any automation:
+1. \`vm_screenshot\` — see the current desktop state
+2. \`vm_inspect_ui\` mode \`screen_info\` — get resolution and active window
+3. \`vm_inspect_ui\` mode \`window_list\` — see all open windows
+4. Verify the target app is running and identify its window title
+
+### 4. Iterative Build Loop — For EACH step of the automation:
+
+**a. OBSERVE — Understand the current state (REQUIRED)**
+- \`vm_screenshot\` to see what is on screen right now
+- \`vm_inspect_ui\` with \`element_tree\` on the target window to map available UI elements
+- \`vm_inspect_ui\` with \`element_at_point\` for specific elements you need to interact with
+
+**b. WRITE — Create the RPA script**
+- Write a Python script using the appropriate framework (pyautogui for mouse/keyboard, uiautomation/pywinauto for element-based interaction)
+- Explain to the user what the script will do before executing
+- Include error handling and appropriate waits/sleeps
+
+**c. VALIDATE — Test the script on the VM (REQUIRED — DO NOT SKIP)**
+- Call \`vm_execute_script\` with the script — the user reviews and approves it
+- Check stdout/stderr for errors or unexpected output
+- If the script errored (non-zero exit code or stderr), fix it and re-execute. Do NOT proceed.
+
+**d. VERIFY — Confirm the result visually (REQUIRED — DO NOT SKIP)**
+- Call \`vm_screenshot\` immediately after execution
+- Analyze the screenshot to confirm the action succeeded (e.g. a button was clicked, a dialog opened, text was entered)
+- If the result does not match expectations, go back to step (b) and adjust
+
+**e. SAVE — Persist as a Laminar workflow step (only after c + d pass)**
+- Call \`create_flow\` with \`flowType: "RPA"\`, \`language: "js"\`, a clear name and description, and a \`program\` that is a **JavaScript arrow function** wrapping the Python script.
+- **NEVER** paste raw Python as the program. The program MUST be a JS arrow function that embeds the Python in a template literal and returns \`lam.rpa\` or \`lam.httpRequest\`.
+- Choose the dispatch pattern based on how the VM was connected:
+
+  **If a Cloudflare Tunnel URL was provided** (via \`vm_connect\`), use \`lam.httpRequest\`:
+  \`\`\`
+  (data) => {
+    const pythonScript = \\\`<the validated Python script>\\\`;
+    return {
+      "lam.httpRequest": {
+        "method": "POST",
+        "url": "{{config.laminar_desktop_service_url}}/execute",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-API-Key": "{{config.laminar_desktop_service_api_key}}",
+          "X-Service-ID": "{{config.laminar_desktop_service_id}}"
+        },
+        "body": {
+          "flowId": "<step-id>",
+          "script": pythonScript,
+          "executionId": "1",
+          "step": { "id": "<step-id>", "name": "<step name>", "description": "<what it does>", "versionId": "v1.0" }
+        }
+      }
+    };
   }
+  \`\`\`
+
+  **If a channelId is configured** (no tunnel), use \`lam.rpa\`:
+  \`\`\`
+  (data) => {
+    const pythonScript = \\\`<the validated Python script>\\\`;
+    return {
+      "lam.rpa": {
+        "script": pythonScript,
+        "channelId": "{{config.channelId}}"
+      }
+    };
+  }
+  \`\`\`
+
+- If unsure which pattern to use, ask the user.
+- Then move to the next step of the automation (back to step a)
+
+### 5. End-to-End Validation
+Once ALL steps are built and individually validated:
+- Use \`execute_workflow\` to run all steps in sequence on the platform
+- Call \`vm_screenshot\` after to verify the final state
+- If any step fails, diagnose with \`diagnose_execution\`, fix, re-validate, and re-test
+
+### 6. Iterate with the User
+- Present the completed workflow with a summary of all steps
+- Ask for feedback and make adjustments
+- Re-validate any changed steps (mandatory — same sequence: execute → screenshot → save)
+
+## Important Rules
+- **VALIDATE BEFORE SAVING** — this is the #1 rule. Every script must be executed on the VM and verified via screenshot before being saved as a workflow step. No exceptions unless the user explicitly opts out.
+- **All script executions require user approval** — always explain what each script does
+- **Use \`{{config.variables}}\` for sensitive data** (credentials, URLs) — never hardcode secrets
+- **Start simple** — get basic mouse/keyboard automation working before adding sophisticated element detection
+- **Add waits** — UI operations need time; use \`time.sleep()\` or element-wait patterns between actions
+- **Handle errors** — wrap interactions in try/except and provide meaningful error messages
+- **Keep scripts focused** — one logical action per step, don't combine unrelated operations
+- **Always screenshot after executing** — you need visual proof that the action worked`,
+        },
+      },
+    ],
+  }),
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

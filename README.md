@@ -18,6 +18,7 @@ Bring your Laminar workspace into **Cursor** and **Claude Code**. Read execution
 - **CRON Management** _(advanced)_ — create, update, toggle, trigger, and delete scheduled jobs
 - **Retry Scheduling** _(advanced)_ — automatically retry failed executions on a schedule
 - **Workflow File Sync** — pull/push workflows to local files for git version control
+- **VM / RPA** — connect to a VM via Cloudflare Tunnel, take screenshots, inspect UI elements, execute RPA scripts, and iteratively build RPA workflows
 
 ## Quick Start
 
@@ -198,7 +199,19 @@ Priority: env vars > config file > not configured (tools show setup instructions
 | `delete_cron_job` | Delete a job |
 | `schedule_retry` | Auto-retry a failed execution on a CRON schedule |
 
-### Workflow File Sync (gint)
+### VM / RPA _(session-based — user provides Cloudflare Tunnel URL at runtime)_
+| Tool | Description |
+|---|---|
+| `vm_connect` | Connect to a Laminar Desktop Service on a VM via Cloudflare Tunnel URL |
+| `vm_disconnect` | Disconnect from the current VM session |
+| `vm_status` | Show current VM connection status and LDS health |
+| `vm_screenshot` | Capture a screenshot of the VM desktop (base64 PNG) |
+| `vm_execute_script` | Execute a Python script on the VM (user reviews before approval) |
+| `vm_inspect_ui` | Inspect UI elements — window list, screen info, element at point, element tree, focused element. Supports uiautomation, pywinauto, and Java Access Bridge frameworks |
+| `vm_execution_status` | Get current execution state on the VM (idle/running/paused/etc) |
+| `vm_execution_control` | Pause, resume, stop, or skip a running execution on the VM |
+
+### Workflow File Sync (git)
 | Tool | Description |
 |---|---|
 | `pull_workflow` | Download workflow to local files (individual step files + metadata) |
@@ -240,6 +253,7 @@ Priority: env vars > config file > not configured (tools show setup instructions
 |---|---|
 | `laminar-workflow-guide` | Complete Laminar workflow specification — step types, data access, libraries, best practices |
 | `debug-workflow-execution` | Feed a failed execution into the AI for root cause analysis and fix suggestions |
+| `build-rpa-workflow` | Guided iterative RPA workflow builder — connect to VM, research app framework, screenshot/inspect/test/save loop |
 
 ## Example Usage in Cursor
 
@@ -260,3 +274,36 @@ Priority: env vars > config file > not configured (tools show setup instructions
 > "List all CRON jobs and disable the one running every minute"
 
 > "Debug execution 5678 of workflow 42 — why did it fail?"
+
+## VM / RPA Workflow Building
+
+The MCP includes tools for connecting to a VM running the Laminar Desktop Service (LDS) and iteratively building RPA workflows. Unlike other services, the VM connection is **session-based** — no env vars or config files needed.
+
+### How it works
+
+1. Install the Laminar Desktop Service on the target VM
+2. Expose it via a Cloudflare Tunnel (you'll get a URL like `https://xxx.trycloudflare.com`)
+3. In your AI editor, tell the agent your tunnel URL and what you want to automate
+4. The agent connects, screenshots the desktop, inspects UI elements, writes and tests RPA scripts, and saves each working step as a Laminar workflow flow
+
+### Example Usage
+
+> "Connect to my VM at https://blue-fox-123.trycloudflare.com"
+
+> "Take a screenshot of the VM desktop"
+
+> "Inspect the UI elements of the Centricity window"
+
+> "Build an RPA workflow that logs into Centricity, navigates to Documents, and downloads the latest report"
+
+### UI Inspection Frameworks
+
+The `vm_inspect_ui` tool supports multiple frameworks for different application types:
+
+| Framework | Best for | Mode |
+|---|---|---|
+| `uiautomation` (default) | .NET, WPF, WinForms, Win32 apps | All modes |
+| `pywinauto` | Alternative Windows UI backend | All modes |
+| `jab` | Java/Swing applications (via Java Access Bridge) | All modes |
+
+If the LDS instance requires authentication, provide `apiKey` and `serviceId` when calling `vm_connect`.
