@@ -26,6 +26,8 @@ import {
   pushChanged,
   readManifest,
 } from "./sync.js";
+import * as lds from "./lds-client.js";
+import { generateInspectScript } from "./inspect-scripts.js";
 
 const TOKEN_PATH = path.join(os.homedir(), ".laminar", "tokens.json");
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
@@ -226,6 +228,30 @@ function requireES() {
 function requireCron() {
   if (!cronService) return text(NOT_CONFIGURED_CRON);
   return null;
+}
+
+// ─── VM / LDS session state ─────────────────────────────────
+
+interface LdsConnection {
+  url: string;
+  apiKey?: string;
+  serviceId?: string;
+}
+
+let ldsConnection: LdsConnection | null = null;
+
+const NOT_CONNECTED_VM = `No VM connected. Ask the user for their Cloudflare Tunnel URL for the Laminar Desktop Service, then call vm_connect.`;
+
+function requireVM() {
+  if (!ldsConnection) return text(NOT_CONNECTED_VM);
+  return null;
+}
+
+function ldsAuth(): lds.LdsAuth | undefined {
+  if (ldsConnection?.apiKey && ldsConnection?.serviceId) {
+    return { apiKey: ldsConnection.apiKey, serviceId: ldsConnection.serviceId };
+  }
+  return undefined;
 }
 
 // ─── Server ──────────────────────────────────────────────────
@@ -1890,6 +1916,271 @@ server.tool(
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  VM / LAMINAR DESKTOP SERVICE (session-based — user provides Cloudflare Tunnel URL at runtime)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Connection Management ────────────────────────────────────
+
+server.tool(
+  "vm_connect",
+  "Connect to a Laminar Desktop Service running on a VM via its Cloudflare Tunnel URL. Call this before using any other vm_* tools. The URL is stored for the duration of this session.",
+  {
+    url: z
+      .string()
+      .describe(
+        "Cloudflare Tunnel URL for the Laminar Desktop Service (e.g. https://xxx.trycloudflare.com)"
+      ),
+    apiKey: z
+      .string()
+      .optional()
+      .describe("LDS API key (only needed if the LDS instance requires auth)"),
+    serviceId: z
+      .string()
+      .optional()
+      .describe(
+        "LDS Service ID (only needed if the LDS instance requires auth)"
+      ),
+  },
+  async ({ url, apiKey, serviceId }) => {
+    try {
+      const h = await lds.health(url);
+      ldsConnection = { url, apiKey, serviceId };
+      return ok({
+        connected: true,
+        url,
+        version: h.version,
+        uptime: h.uptime,
+        status: h.status,
+        authConfigured: !!(apiKey && serviceId),
+      });
+    } catch (e: any) {
+      ldsConnection = null;
+      return text(`Failed to connect to LDS at ${url}: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "vm_disconnect",
+  "Disconnect from the current VM / Laminar Desktop Service session",
+  {},
+  async () => {
+    const wasConnected = !!ldsConnection;
+    const prevUrl = ldsConnection?.url;
+    ldsConnection = null;
+    return text(
+      wasConnected
+        ? `Disconnected from ${prevUrl}`
+        : "No VM was connected."
+    );
+  }
+);
+
+server.tool(
+  "vm_status",
+  "Show current VM connection status (URL, connected or not)",
+  {},
+  async () => {
+    if (!ldsConnection) return text(NOT_CONNECTED_VM);
+    try {
+      const h = await lds.health(ldsConnection.url);
+      return ok({
+        connected: true,
+        url: ldsConnection.url,
+        authConfigured: !!(ldsConnection.apiKey && ldsConnection.serviceId),
+        lds: h,
+      });
+    } catch (e: any) {
+      return ok({
+        connected: true,
+        url: ldsConnection.url,
+        reachable: false,
+        error: e.message,
+      });
+    }
+  }
+);
+
+// ── Core VM Tools ────────────────────────────────────────────
+
+server.tool(
+  "vm_screenshot",
+  "Capture a screenshot of the VM desktop. Returns the image as base64 PNG with metadata (width, height, capture duration).",
+  {},
+  async () => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const res = await lds.screenshot(ldsConnection!.url, ldsAuth());
+      return {
+        content: [
+          {
+            type: "image" as const,
+            data: res.image,
+            mimeType: "image/png" as const,
+          },
+          {
+            type: "text" as const,
+            text: json({
+              width: res.metadata.width,
+              height: res.metadata.height,
+              size_bytes: res.metadata.size_bytes,
+              capture_duration_ms: res.metadata.capture_duration_ms,
+              timestamp: res.metadata.timestamp,
+            }),
+          },
+        ],
+      };
+    } catch (e: any) {
+      return text(`Screenshot failed: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "vm_execute_script",
+  "Execute a Python script on the VM desktop via the Laminar Desktop Service. The script runs with full desktop access (pyautogui, uiautomation, etc.). The user will review the script before it executes.",
+  {
+    script: z.string().describe("Python script to execute on the VM"),
+    executionId: z
+      .string()
+      .optional()
+      .describe("Execution ID for tracking"),
+    flowId: z.string().optional().describe("Flow/workflow ID for tracking"),
+  },
+  async ({ script, executionId, flowId }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const res = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { executionId, flowId },
+        ldsAuth()
+      );
+      return ok({
+        success: res.success,
+        exitCode: res.exitCode,
+        stdout: res.stdout,
+        stderr: res.stderr,
+        executionTimeMs: res.executionTimeMs,
+        skipped: res.skipped,
+        stopped: res.stopped,
+        resultData: res.resultData,
+      });
+    } catch (e: any) {
+      return text(`Script execution failed: ${e.message}`);
+    }
+  }
+);
+
+server.tool(
+  "vm_execution_status",
+  "Get the current execution state on the VM (idle, running, paused, stopped, completed, failed)",
+  {},
+  async () => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    return safe(() => lds.executionStatus(ldsConnection!.url));
+  }
+);
+
+server.tool(
+  "vm_execution_control",
+  "Send a control command to the currently running execution on the VM",
+  {
+    command: z
+      .enum(["pause", "resume", "stop", "skip"])
+      .describe("Control command to send"),
+  },
+  async ({ command }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    return safe(() => lds.executionControl(ldsConnection!.url, command));
+  }
+);
+
+// ── UI Inspection ────────────────────────────────────────────
+
+server.tool(
+  "vm_inspect_ui",
+  "Inspect UI elements on the VM desktop. Generates and executes the appropriate inspection script for the chosen framework. Use this to understand what is on screen, get element coordinates, and map the UI tree before writing RPA scripts.",
+  {
+    mode: z
+      .enum([
+        "window_list",
+        "screen_info",
+        "element_at_point",
+        "element_tree",
+        "focused_element",
+      ])
+      .describe(
+        "window_list: list visible windows. screen_info: resolution/DPI/active window. element_at_point: inspect element at x,y. element_tree: accessibility tree for a window. focused_element: currently focused control."
+      ),
+    x: z
+      .number()
+      .optional()
+      .describe("X coordinate (for element_at_point mode)"),
+    y: z
+      .number()
+      .optional()
+      .describe("Y coordinate (for element_at_point mode)"),
+    windowTitle: z
+      .string()
+      .optional()
+      .describe(
+        "Window title to inspect (for element_tree mode; omit to use the foreground window)"
+      ),
+    framework: z
+      .enum(["auto", "uiautomation", "pywinauto", "jab"])
+      .optional()
+      .describe(
+        "UI automation framework to use. auto (default) uses uiautomation. Use jab for Java/Swing apps, pywinauto for an alternative Windows UI backend."
+      ),
+    depth: z
+      .number()
+      .optional()
+      .describe(
+        "Max depth for element_tree traversal (default 3). Keep low to avoid huge output."
+      ),
+  },
+  async ({ mode, x, y, windowTitle, framework, depth }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const script = generateInspectScript({
+        mode,
+        x,
+        y,
+        windowTitle,
+        framework: framework ?? "auto",
+        depth,
+      });
+      const res = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { flowId: `inspect-${mode}` },
+        ldsAuth()
+      );
+      if (!res.success) {
+        return text(
+          `Inspection failed (exit ${res.exitCode}):\n${res.stderr || res.stdout}`
+        );
+      }
+      // Try to parse stdout as JSON for clean output
+      try {
+        const parsed = JSON.parse(res.stdout);
+        return ok(parsed);
+      } catch {
+        return text(res.stdout);
+      }
+    } catch (e: any) {
+      return text(`Inspection failed: ${e.message}`);
+    }
+  }
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  PROMPTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -2110,6 +2401,119 @@ Analyze the execution, identify failures, explain root causes, and suggest speci
       ],
     };
   }
+);
+
+server.prompt(
+  "build-rpa-workflow",
+  "Iteratively build an RPA workflow on a VM using the Laminar Desktop Service. Guides you through connecting to the VM, researching the target app's UI framework, taking screenshots, inspecting UI elements, writing and testing RPA scripts, and saving each working step as a Laminar workflow flow.",
+  {
+    workspaceId: z.string().describe("Laminar workspace ID"),
+    task: z
+      .string()
+      .describe(
+        "Description of what to automate (e.g. 'Log into Centricity, navigate to Documents, download the latest report')"
+      ),
+    appName: z
+      .string()
+      .describe(
+        "Name of the application to automate (e.g. 'Centricity', 'SAP GUI', 'Epic Hyperspace')"
+      ),
+    workflowId: z
+      .string()
+      .optional()
+      .describe(
+        "Existing workflow ID to add steps to (omit to create a new workflow)"
+      ),
+  },
+  async ({ workspaceId, task, appName, workflowId }) => ({
+    messages: [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: `You are building an RPA workflow on the Laminar platform. Your goal is to iteratively create automation steps that run on a VM via the Laminar Desktop Service (LDS).
+
+## Task
+${task}
+
+## Target Application
+${appName}
+
+## Workspace
+ID: ${workspaceId}${workflowId ? `\nExisting workflow ID: ${workflowId} (add steps to this workflow)` : "\nCreate a new workflow for this automation."}
+
+## Procedure
+
+### 1. Connect to the VM
+If no VM is connected, ask the user for their **Cloudflare Tunnel URL** for the Laminar Desktop Service. Then call \`vm_connect\` with that URL.
+
+### 2. Research the Target Application
+Based on the app name "${appName}", determine which UI automation framework to use:
+- **.NET / WPF / WinForms apps** → \`uiautomation\` (default) or \`pywinauto\`
+- **Java / Swing apps** → \`jab\` (Java Access Bridge)
+- **Electron / web-based desktop apps** → \`pywinauto\` or direct keyboard/mouse with pyautogui
+- **Legacy Win32 apps** → \`uiautomation\`
+
+If unsure, start with \`uiautomation\` and switch if inspection fails. Ask the user if you need clarification.
+
+### 3. Initial Survey
+- Take a screenshot with \`vm_screenshot\`
+- Run \`vm_inspect_ui\` with mode \`screen_info\` to get resolution and active window
+- Run \`vm_inspect_ui\` with mode \`window_list\` to see all open windows
+- Verify the target app is running and identify its window
+
+### 4. Iterative Build Loop
+For each step of the automation:
+
+**a. Understand the current state**
+- \`vm_screenshot\` to see what's on screen
+- \`vm_inspect_ui\` with \`element_tree\` on the target window to map the UI
+- \`vm_inspect_ui\` with \`element_at_point\` for specific elements you need to interact with
+
+**b. Write the RPA script**
+- Write a Python script using the appropriate framework (pyautogui for mouse/keyboard, uiautomation/pywinauto for element-based interaction)
+- Explain to the user what the script will do before executing
+- Include error handling and appropriate waits/sleeps
+
+**c. Test the script**
+- Execute with \`vm_execute_script\`
+- The user will review and approve the script before execution
+- Check stdout/stderr for errors
+
+**d. Verify the result**
+- \`vm_screenshot\` to confirm the action succeeded
+- If it failed, analyze what went wrong and adjust the script
+
+**e. Save as a Laminar workflow step**
+- Once a script works, save it using \`create_flow\` with:
+  - \`flowType: "RPA"\`
+  - \`language: "js"\` (RPA flows MUST use "js" — the platform wraps the Python script)
+  - The Python script as the program content
+  - Clear name and description
+- Continue to the next step
+
+### 5. End-to-End Test
+Once all steps are built, test the complete workflow:
+- Use \`execute_workflow\` to run all steps in sequence
+- Monitor with \`vm_screenshot\` after each step completes
+- Verify the full automation works end-to-end
+
+### 6. Iterate with the User
+- Present the completed workflow
+- Ask for feedback and make adjustments
+- Re-test after changes
+
+## Important Rules
+- **All script executions require user approval** — always explain what each script does
+- **Use \`{{config.variables}}\` for sensitive data** (credentials, URLs) — never hardcode secrets
+- **Start simple** — get basic mouse/keyboard automation working before adding sophisticated element detection
+- **Add waits** — UI operations need time; use \`time.sleep()\` or element-wait patterns
+- **Handle errors** — wrap interactions in try/except and provide meaningful error messages
+- **Keep scripts focused** — one logical action per step, don't combine unrelated operations`,
+        },
+      },
+    ],
+  })
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
