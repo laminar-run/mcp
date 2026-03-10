@@ -401,7 +401,7 @@ server.tool(
 
 server.tool(
   "create_flow",
-  "Create a new flow/step in a workflow. flowType: HTTP_REQUEST, GENERAL_FUNCTION, SHELL_SCRIPT, or RPA. language: js or py.",
+  "Create a new flow/step in a workflow. flowType: HTTP_REQUEST, GENERAL_FUNCTION, SHELL_SCRIPT, or RPA. language: js or py. For RPA flows: you MUST validate the script on the VM first (vm_execute_script + vm_screenshot) before saving it here.",
   {
     workflowId: z.number().describe("Workflow ID"),
     name: z.string().describe("Step name"),
@@ -2039,7 +2039,7 @@ server.tool(
 
 server.tool(
   "vm_execute_script",
-  "Execute a Python script on the VM desktop via the Laminar Desktop Service. The script runs with full desktop access (pyautogui, uiautomation, etc.). The user will review the script before it executes.",
+  "Execute a Python script on the VM desktop via the Laminar Desktop Service. The script runs with full desktop access (pyautogui, uiautomation, etc.). The user will review the script before it executes. IMPORTANT: When building RPA workflows, you MUST call this to validate every script on the VM, then call vm_screenshot to verify the result, BEFORE saving the step with create_flow.",
   {
     script: z.string().describe("Python script to execute on the VM"),
     executionId: z
@@ -2442,6 +2442,16 @@ ${appName}
 ## Workspace
 ID: ${workspaceId}${workflowId ? `\nExisting workflow ID: ${workflowId} (add steps to this workflow)` : "\nCreate a new workflow for this automation."}
 
+## CRITICAL RULE — MANDATORY VALIDATION
+
+**NEVER save a step to the Laminar workflow without first validating it on the VM.** Every single RPA script MUST go through this exact sequence before being saved:
+
+1. \`vm_execute_script\` — run the script on the VM
+2. \`vm_screenshot\` — visually confirm the action produced the expected result
+3. Only if BOTH succeed → save via \`create_flow\`
+
+If validation fails, fix the script and re-run this sequence. Do NOT skip validation unless the user explicitly says to. This is non-negotiable.
+
 ## Procedure
 
 ### 1. Connect to the VM
@@ -2454,62 +2464,65 @@ Based on the app name "${appName}", determine which UI automation framework to u
 - **Electron / web-based desktop apps** → \`pywinauto\` or direct keyboard/mouse with pyautogui
 - **Legacy Win32 apps** → \`uiautomation\`
 
-If unsure, start with \`uiautomation\` and switch if inspection fails. Ask the user if you need clarification.
+If unsure, start with \`uiautomation\` and switch if inspection fails. Ask the user if you need clarification about the app or its technology stack.
 
-### 3. Initial Survey
-- Take a screenshot with \`vm_screenshot\`
-- Run \`vm_inspect_ui\` with mode \`screen_info\` to get resolution and active window
-- Run \`vm_inspect_ui\` with mode \`window_list\` to see all open windows
-- Verify the target app is running and identify its window
+### 3. Initial Survey (ALWAYS do this first)
+You MUST perform all of these before writing any automation:
+1. \`vm_screenshot\` — see the current desktop state
+2. \`vm_inspect_ui\` mode \`screen_info\` — get resolution and active window
+3. \`vm_inspect_ui\` mode \`window_list\` — see all open windows
+4. Verify the target app is running and identify its window title
 
-### 4. Iterative Build Loop
-For each step of the automation:
+### 4. Iterative Build Loop — For EACH step of the automation:
 
-**a. Understand the current state**
-- \`vm_screenshot\` to see what's on screen
-- \`vm_inspect_ui\` with \`element_tree\` on the target window to map the UI
+**a. OBSERVE — Understand the current state (REQUIRED)**
+- \`vm_screenshot\` to see what is on screen right now
+- \`vm_inspect_ui\` with \`element_tree\` on the target window to map available UI elements
 - \`vm_inspect_ui\` with \`element_at_point\` for specific elements you need to interact with
 
-**b. Write the RPA script**
+**b. WRITE — Create the RPA script**
 - Write a Python script using the appropriate framework (pyautogui for mouse/keyboard, uiautomation/pywinauto for element-based interaction)
 - Explain to the user what the script will do before executing
 - Include error handling and appropriate waits/sleeps
 
-**c. Test the script**
-- Execute with \`vm_execute_script\`
-- The user will review and approve the script before execution
-- Check stdout/stderr for errors
+**c. VALIDATE — Test the script on the VM (REQUIRED — DO NOT SKIP)**
+- Call \`vm_execute_script\` with the script — the user reviews and approves it
+- Check stdout/stderr for errors or unexpected output
+- If the script errored (non-zero exit code or stderr), fix it and re-execute. Do NOT proceed.
 
-**d. Verify the result**
-- \`vm_screenshot\` to confirm the action succeeded
-- If it failed, analyze what went wrong and adjust the script
+**d. VERIFY — Confirm the result visually (REQUIRED — DO NOT SKIP)**
+- Call \`vm_screenshot\` immediately after execution
+- Analyze the screenshot to confirm the action succeeded (e.g. a button was clicked, a dialog opened, text was entered)
+- If the result does not match expectations, go back to step (b) and adjust
 
-**e. Save as a Laminar workflow step**
-- Once a script works, save it using \`create_flow\` with:
+**e. SAVE — Persist as a Laminar workflow step (only after c + d pass)**
+- Call \`create_flow\` with:
   - \`flowType: "RPA"\`
   - \`language: "js"\` (RPA flows MUST use "js" — the platform wraps the Python script)
   - The Python script as the program content
-  - Clear name and description
-- Continue to the next step
+  - Clear name and description explaining what this step does
+- Then move to the next step of the automation (back to step a)
 
-### 5. End-to-End Test
-Once all steps are built, test the complete workflow:
-- Use \`execute_workflow\` to run all steps in sequence
-- Monitor with \`vm_screenshot\` after each step completes
-- Verify the full automation works end-to-end
+### 5. End-to-End Validation
+Once ALL steps are built and individually validated:
+- Use \`execute_workflow\` to run all steps in sequence on the platform
+- Call \`vm_screenshot\` after to verify the final state
+- If any step fails, diagnose with \`diagnose_execution\`, fix, re-validate, and re-test
 
 ### 6. Iterate with the User
-- Present the completed workflow
+- Present the completed workflow with a summary of all steps
 - Ask for feedback and make adjustments
-- Re-test after changes
+- Re-validate any changed steps (mandatory — same sequence: execute → screenshot → save)
 
 ## Important Rules
+- **VALIDATE BEFORE SAVING** — this is the #1 rule. Every script must be executed on the VM and verified via screenshot before being saved as a workflow step. No exceptions unless the user explicitly opts out.
 - **All script executions require user approval** — always explain what each script does
 - **Use \`{{config.variables}}\` for sensitive data** (credentials, URLs) — never hardcode secrets
 - **Start simple** — get basic mouse/keyboard automation working before adding sophisticated element detection
-- **Add waits** — UI operations need time; use \`time.sleep()\` or element-wait patterns
+- **Add waits** — UI operations need time; use \`time.sleep()\` or element-wait patterns between actions
 - **Handle errors** — wrap interactions in try/except and provide meaningful error messages
-- **Keep scripts focused** — one logical action per step, don't combine unrelated operations`,
+- **Keep scripts focused** — one logical action per step, don't combine unrelated operations
+- **Always screenshot after executing** — you need visual proof that the action worked`,
         },
       },
     ],
