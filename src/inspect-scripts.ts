@@ -96,28 +96,31 @@ print(json.dumps({
 import json, uiautomation as auto
 
 x, y = ${params.x ?? 0}, ${params.y ?? 0}
-ctrl = auto.ControlFromPoint(x, y)
-rect = ctrl.BoundingRectangle
-result = {
-    "name": ctrl.Name or "",
-    "controlType": ctrl.ControlTypeName,
-    "automationId": ctrl.AutomationId,
-    "className": ctrl.ClassName,
-    "rect": {"left": rect.left, "top": rect.top, "right": rect.right, "bottom": rect.bottom},
-    "size": f"{rect.width()}x{rect.height()}",
-    "center": {"x": rect.xcenter(), "y": rect.ycenter()},
-    "isEnabled": ctrl.IsEnabled,
-    "point": {"x": x, "y": y}
-}
-
 try:
-    parent = ctrl.GetParentControl()
-    if parent:
-        result["parent"] = {"name": parent.Name or "", "controlType": parent.ControlTypeName}
-except Exception:
-    pass
+    ctrl = auto.ControlFromPoint(x, y)
+    rect = ctrl.BoundingRectangle
+    result = {
+        "name": ctrl.Name or "",
+        "controlType": ctrl.ControlTypeName,
+        "automationId": ctrl.AutomationId,
+        "className": ctrl.ClassName,
+        "rect": {"left": rect.left, "top": rect.top, "right": rect.right, "bottom": rect.bottom},
+        "size": f"{rect.width()}x{rect.height()}",
+        "center": {"x": rect.xcenter(), "y": rect.ycenter()},
+        "isEnabled": ctrl.IsEnabled,
+        "point": {"x": x, "y": y}
+    }
 
-print(json.dumps(result, indent=2))
+    try:
+        parent = ctrl.GetParentControl()
+        if parent:
+            result["parent"] = {"name": parent.Name or "", "controlType": parent.ControlTypeName}
+    except Exception:
+        pass
+
+    print(json.dumps(result, indent=2))
+except Exception as e:
+    print(json.dumps({"error": f"No element found at ({x}, {y}): {e}", "point": {"x": x, "y": y}}, indent=2))
 `.trim();
 
     case "element_tree": {
@@ -555,6 +558,28 @@ def pump_bg(pipe):
     except Exception as e:
         pipe.put(None)
 
+def find_focused(jab, ctx, window_title, max_depth=20):
+    try:
+        info = jab.get_context_info(ctx)
+        if 'focused' in (info.states or '').lower():
+            return {
+                "name": info.name, "role": info.role,
+                "x": info.x, "y": info.y, "width": info.width, "height": info.height,
+                "states": info.states, "window": window_title
+            }
+        if max_depth > 0:
+            for i in range(info.childrenCount):
+                try:
+                    child_ctx = jab.get_accessible_child_from_context(ctx, i)
+                    result = find_focused(jab, child_ctx, window_title, max_depth - 1)
+                    if result:
+                        return result
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return None
+
 pipe = queue.Queue()
 t = threading.Thread(target=pump_bg, daemon=True, args=[pipe])
 t.start()
@@ -564,25 +589,19 @@ if not jab:
 else:
     time.sleep(0.1)
     windows = jab.get_windows()
-    found = False
+    found = None
     for w in windows:
         try:
             vm_id, root_ctx = jab.get_accessible_context_from_hwnd(w.hwnd)
             jab.set_context(vm_id, root_ctx)
-            # Walk tree to find focused element
-            info = jab.get_context_info(root_ctx)
-            if 'focused' in (info.states or '').lower():
-                result = {
-                    "name": info.name, "role": info.role,
-                    "x": info.x, "y": info.y, "width": info.width, "height": info.height,
-                    "states": info.states, "window": w.title
-                }
-                print(json.dumps(result, indent=2))
-                found = True
+            found = find_focused(jab, root_ctx, w.title)
+            if found:
                 break
         except Exception:
             continue
-    if not found:
+    if found:
+        print(json.dumps(found, indent=2))
+    else:
         print(json.dumps({"info": "No focused Java element found. Listing windows instead."}))
     jab.shutdown()
 `.trim();

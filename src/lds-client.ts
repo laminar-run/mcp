@@ -162,27 +162,34 @@ export async function execute(
 }
 
 export async function executionStatus(
-  baseUrl: string
+  baseUrl: string,
+  auth?: LdsAuth
 ): Promise<LdsExecutionStatusResponse> {
   const url = `${normalizeUrl(baseUrl)}/execute/status`;
-  return request<LdsExecutionStatusResponse>(url);
+  return request<LdsExecutionStatusResponse>(url, {
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+  });
 }
 
 export async function executionProgress(
-  baseUrl: string
+  baseUrl: string,
+  auth?: LdsAuth
 ): Promise<LdsExecutionProgressResponse> {
   const url = `${normalizeUrl(baseUrl)}/execute/progress`;
-  return request<LdsExecutionProgressResponse>(url);
+  return request<LdsExecutionProgressResponse>(url, {
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+  });
 }
 
 export async function executionControl(
   baseUrl: string,
-  command: "pause" | "resume" | "stop" | "skip"
+  command: "pause" | "resume" | "stop" | "skip",
+  auth?: LdsAuth
 ): Promise<LdsControlResponse> {
   const url = `${normalizeUrl(baseUrl)}/execute/control`;
   return request<LdsControlResponse>(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
     body: JSON.stringify({ command }),
   });
 }

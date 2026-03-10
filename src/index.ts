@@ -2016,7 +2016,7 @@ server.tool(
   async () => {
     const blocked = requireVM();
     if (blocked) return blocked;
-    return safe(() => lds.executionStatus(ldsConnection!.url));
+    return safe(() => lds.executionStatus(ldsConnection!.url, ldsAuth()));
   },
 );
 
@@ -2031,7 +2031,7 @@ server.tool(
   async ({ command }) => {
     const blocked = requireVM();
     if (blocked) return blocked;
-    return safe(() => lds.executionControl(ldsConnection!.url, command));
+    return safe(() => lds.executionControl(ldsConnection!.url, command, ldsAuth()));
   },
 );
 
