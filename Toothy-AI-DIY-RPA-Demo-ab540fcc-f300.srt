@@ -1,0 +1,5597 @@
+
+Meeting created at: 11th Mar, 2026 - 9:05 AM1
+00:00:01,600 --> 00:00:02,680
+Matt Kerrigan: Let me just ping them.
+
+2
+00:00:02,680 --> 00:00:03,920
+Matt Kerrigan: I'll ask really quickly.
+
+3
+00:00:04,800 --> 00:00:05,240
+Matt Kerrigan: Okay.
+
+4
+00:00:05,240 --> 00:00:06,720
+Dan Nguyen: Matt, do you know the machine name?
+
+5
+00:00:07,840 --> 00:00:10,320
+Matt Kerrigan: Yeah, I know I'm looking at the same thing.
+
+6
+00:00:10,320 --> 00:00:11,600
+Matt Kerrigan: And we're gonna shoot here.
+
+7
+00:00:11,600 --> 00:00:12,640
+Matt Kerrigan: Oh, well, no.
+
+8
+00:00:17,440 --> 00:00:17,880
+Faizaan Chishtie: Okay.
+
+9
+00:00:17,880 --> 00:00:19,360
+Faizaan Chishtie: So can you guys see my screen?
+
+10
+00:00:21,440 --> 00:00:22,000
+Matt Kerrigan: Yep.
+
+11
+00:00:24,640 --> 00:00:24,960
+Matt Kerrigan: Sorry.
+
+12
+00:00:24,960 --> 00:00:26,000
+Faizaan Chishtie: Let me just reconnect to this.
+
+13
+00:00:26,120 --> 00:00:27,440
+Faizaan Chishtie: There's a VM inside of VM here.
+
+14
+00:00:27,440 --> 00:00:28,200
+Faizaan Chishtie: But basically.
+
+15
+00:00:29,080 --> 00:00:33,720
+Faizaan Chishtie: So the way that we do Pyauto gui, that's really annoying.
+
+16
+00:00:37,160 --> 00:00:38,680
+Faizaan Chishtie: Worst case, I have a Loom demo.
+
+17
+00:00:38,840 --> 00:00:45,960
+Faizaan Chishtie: But what would happen is you guys would be able to record, like, you know how you're doing, like the Pyato GUI stuff and you're finding a path.
+
+18
+00:00:47,080 --> 00:00:50,120
+Faizaan Chishtie: You would basically be able to do it through, like, cursor.
+
+19
+00:00:51,000 --> 00:00:54,120
+Faizaan Chishtie: So I can show you an example video here.
+
+20
+00:00:55,240 --> 00:00:57,000
+Faizaan Chishtie: So can you guys see my screen?
+
+21
+00:00:59,720 --> 00:01:00,200
+Dan Nguyen: Yeah.
+
+22
+00:01:01,720 --> 00:01:06,040
+Faizaan Chishtie: So we're going to build something that looks like this with cursor.
+
+23
+00:01:16,840 --> 00:01:18,760
+Faizaan Chishtie: So here's the prompt on the left.
+
+24
+00:01:19,400 --> 00:01:21,800
+Faizaan Chishtie: It says, like, I want you to create an RPA workflow.
+
+25
+00:01:22,840 --> 00:01:24,600
+Faizaan Chishtie: Sorry, our company used to be called Laminar.
+
+26
+00:01:24,600 --> 00:01:26,280
+Faizaan Chishtie: So we say Laminar workspace.
+
+27
+00:01:26,600 --> 00:01:34,760
+Faizaan Chishtie: And then it says, I want to be able to like, open the invoice entry window on like Sage 300 on the desktop over here, if that makes sense.
+
+28
+00:01:37,480 --> 00:01:38,040
+Faizaan Chishtie: Does that.
+
+29
+00:01:38,040 --> 00:01:38,800
+Faizaan Chishtie: Does that make sense?
+
+30
+00:01:38,800 --> 00:01:40,360
+Matt Kerrigan: So far, the video.
+
+31
+00:01:40,840 --> 00:01:45,720
+Matt Kerrigan: Was the video actually injected as context or like, you're just starting with like, the written prompt.
+
+32
+00:01:46,230 --> 00:01:47,430
+Faizaan Chishtie: Literally just the written prompt.
+
+33
+00:01:47,670 --> 00:01:50,390
+Faizaan Chishtie: So what the AI is going to do is it's going to.
+
+34
+00:01:51,510 --> 00:01:55,110
+Faizaan Chishtie: I don't know if you see, we have like our desktop service installed on that virtual machine.
+
+35
+00:01:55,670 --> 00:02:00,230
+Faizaan Chishtie: And so what it's going to do is it's going to ask for the URL of that particular virtual machine.
+
+36
+00:02:00,630 --> 00:02:02,470
+Faizaan Chishtie: So we use cloudflare tunnels.
+
+37
+00:02:03,670 --> 00:02:04,310
+Matt Kerrigan: Okay.
+
+38
+00:02:05,030 --> 00:02:22,570
+Faizaan Chishtie: So here it's asking for the URL and I paste it in and then once I give it the URL, then the cursor bot can take screenshots and then also run like the Pyato GUI code itself.
+
+39
+00:02:22,730 --> 00:02:28,330
+Faizaan Chishtie: We have like a few, like, Inspect element type automations.
+
+40
+00:02:28,970 --> 00:02:34,250
+Faizaan Chishtie: So here's it actually trying to run something on the VM to test the.
+
+41
+00:02:36,650 --> 00:02:39,210
+Faizaan Chishtie: So it's testing the rpa, basically, that it's building.
+
+42
+00:02:42,420 --> 00:02:44,420
+Faizaan Chishtie: Sorry, is this making sense in terms of what's.
+
+43
+00:02:44,420 --> 00:02:44,980
+Matt Kerrigan: No, it is.
+
+44
+00:02:45,860 --> 00:02:48,740
+Matt Kerrigan: I built exactly this for the portal stuff with CloudCruise.
+
+45
+00:02:49,620 --> 00:02:53,460
+Matt Kerrigan: It's taking screenshots and it's iterating on the code to see.
+
+46
+00:02:53,620 --> 00:02:56,340
+Matt Kerrigan: Exactly right, exactly.
+
+47
+00:02:56,340 --> 00:02:56,940
+Faizaan Chishtie: It's just that.
+
+48
+00:02:56,940 --> 00:02:58,660
+Faizaan Chishtie: But just on desktop.
+
+49
+00:02:58,660 --> 00:03:02,340
+Faizaan Chishtie: And then what happens is then it creates a workflow for you guys.
+
+50
+00:03:03,620 --> 00:03:05,620
+Faizaan Chishtie: And I think I just have to fix the formatting here.
+
+51
+00:03:06,620 --> 00:03:10,460
+Faizaan Chishtie: But once that's done, you guys can trigger it via API.
+
+52
+00:03:11,900 --> 00:03:14,460
+Faizaan Chishtie: Here's probably me doing it in a second.
+
+53
+00:03:18,540 --> 00:03:24,380
+Faizaan Chishtie: All the PI auto, GUI code gets tossed in there and then you can run it.
+
+54
+00:03:26,620 --> 00:03:30,380
+Faizaan Chishtie: I'm running it from our platform, but you can run it via API as well.
+
+55
+00:03:30,780 --> 00:03:32,620
+Faizaan Chishtie: Here's the actual RPA that the.
+
+56
+00:03:33,460 --> 00:03:34,500
+Faizaan Chishtie: That the AI built.
+
+57
+00:03:37,700 --> 00:03:38,260
+Faizaan Chishtie: And then.
+
+58
+00:03:38,260 --> 00:03:45,300
+Faizaan Chishtie: And then once it's done, you get a video recording of the output just like this at the beginning.
+
+59
+00:03:45,620 --> 00:03:46,060
+Faizaan Chishtie: I don't know.
+
+60
+00:03:46,060 --> 00:03:46,980
+Faizaan Chishtie: You can see how happy I am.
+
+61
+00:03:47,940 --> 00:03:51,620
+Faizaan Chishtie: Yeah, yeah, you'd see something like this.
+
+62
+00:03:51,620 --> 00:03:58,700
+Faizaan Chishtie: Like, it's like, okay, like one of one is done and then you get a replay and then for debugging purposes, et cetera.
+
+63
+00:03:58,700 --> 00:03:59,380
+Faizaan Chishtie: Sorry, does that make.
+
+64
+00:03:59,650 --> 00:04:02,690
+Faizaan Chishtie: I know this is like an idea, but.
+
+65
+00:04:02,850 --> 00:04:05,090
+Matt Kerrigan: Yeah, yeah, no, it makes sense.
+
+66
+00:04:05,890 --> 00:04:06,290
+Matt Kerrigan: The.
+
+67
+00:04:06,370 --> 00:04:07,410
+Matt Kerrigan: Okay, so we have access.
+
+68
+00:04:07,410 --> 00:04:08,530
+Matt Kerrigan: We'll be able to do this ourselves.
+
+69
+00:04:08,930 --> 00:04:11,930
+Matt Kerrigan: A couple questions at least for me.
+
+70
+00:04:11,930 --> 00:04:14,610
+Matt Kerrigan: Dan, you might have some here too, but like, the.
+
+71
+00:04:15,409 --> 00:04:17,250
+Matt Kerrigan: So, like, making it work.
+
+72
+00:04:17,649 --> 00:04:23,530
+Matt Kerrigan: You know, software has like a lot of branching paths depending on different conditions and all this other shit.
+
+73
+00:04:23,530 --> 00:04:32,380
+Matt Kerrigan: So you get like a workflow down for like doing like a single thing, for like iterating on in order to like add adjustments.
+
+74
+00:04:32,620 --> 00:04:33,460
+Matt Kerrigan: Like I said.
+
+75
+00:04:33,460 --> 00:04:45,820
+Matt Kerrigan: I think, like, what I'm having in my head is like, I would want to run like a big batch of examples and then kind of like have iterate to figure out how to do this stuff off of that.
+
+76
+00:04:47,580 --> 00:04:49,340
+Matt Kerrigan: What does that workflow look like right now?
+
+77
+00:04:49,340 --> 00:04:52,300
+Matt Kerrigan: Do you like, is there like one.
+
+78
+00:04:52,300 --> 00:04:57,060
+Matt Kerrigan: Is there a way to like, you know, kind of just have it run on something else and then like kind of edit it from there?
+
+79
+00:04:57,060 --> 00:05:02,260
+Matt Kerrigan: Like, you know, be like, I guess, like, what does the workflow look like typically?
+
+80
+00:05:02,260 --> 00:05:17,140
+Matt Kerrigan: Are you like sitting, like having it run every single one and like you're watching it and then like adjusting it or like, are you able to kind of just give it a bunch of stuff and then just kind of let it like rip and it works like, you know, like, typically, like, just walk me through that experience.
+
+81
+00:05:17,380 --> 00:05:17,860
+Matt Kerrigan: Typically.
+
+82
+00:05:18,260 --> 00:05:18,580
+Matt Kerrigan: Yeah.
+
+83
+00:05:18,580 --> 00:05:18,740
+Loic Kandikandi: Yeah.
+
+84
+00:05:18,740 --> 00:05:18,940
+Matt Kerrigan: Okay.
+
+85
+00:05:18,940 --> 00:05:22,540
+Faizaan Chishtie: So candidly, like, the cursor, like experience is kind of new for the.
+
+86
+00:05:22,610 --> 00:05:35,090
+Faizaan Chishtie: So we're still testing it like upper bound, but like Loic's like, we basically like replicated Loic's like the workflow that he does to get customers to go live and which is like a loop.
+
+87
+00:05:35,090 --> 00:05:38,050
+Faizaan Chishtie: So I don't know if you want to talk about that, like, how you would do that basically.
+
+88
+00:05:38,449 --> 00:05:45,330
+Loic Kandikandi: Yeah, it's pretty much exactly what you described, you've done in the past.
+
+89
+00:05:46,610 --> 00:05:54,030
+Loic Kandikandi: You feed it a bunch of screenshots, you let Cursor take a shot at it, and then you validate.
+
+90
+00:05:55,630 --> 00:05:59,470
+Loic Kandikandi: Usually the validation process is like a manual one.
+
+91
+00:05:59,710 --> 00:06:07,070
+Loic Kandikandi: Like, I typically would have to like check that it's working as expected.
+
+92
+00:06:08,990 --> 00:06:18,700
+Loic Kandikandi: But now with Cursor now having access to, having the ability to take screenshots of the vm, it can kind of do that itself.
+
+93
+00:06:18,700 --> 00:06:19,220
+Loic Kandikandi: Like it can.
+
+94
+00:06:19,220 --> 00:06:19,540
+Loic Kandikandi: It can.
+
+95
+00:06:19,540 --> 00:06:21,380
+Loic Kandikandi: It can, it can.
+
+96
+00:06:21,380 --> 00:06:22,980
+Loic Kandikandi: It can validate itself like whether.
+
+97
+00:06:22,980 --> 00:06:23,660
+Loic Kandikandi: Whether it's.
+
+98
+00:06:23,660 --> 00:06:24,100
+Loic Kandikandi: It's.
+
+99
+00:06:24,420 --> 00:06:24,900
+Loic Kandikandi: It's.
+
+100
+00:06:25,700 --> 00:06:26,060
+Loic Kandikandi: Whether.
+
+101
+00:06:26,060 --> 00:06:26,860
+Loic Kandikandi: Yeah, it's.
+
+102
+00:06:26,860 --> 00:06:30,500
+Loic Kandikandi: It's things are headed in the right direction and then reprompt itself.
+
+103
+00:06:31,060 --> 00:06:32,900
+Loic Kandikandi: And I think that's kind of the huge.
+
+104
+00:06:33,780 --> 00:06:41,220
+Loic Kandikandi: It's been a. I'm kind of really excited about this because I, I would say that like rpa, like building rpa, the.
+
+105
+00:06:41,820 --> 00:06:46,060
+Loic Kandikandi: The biggest time sake is really just that iteration process.
+
+106
+00:06:46,460 --> 00:06:56,220
+Loic Kandikandi: But now that I can just trust Cursor to do it and not have to look at it, I think that should hopefully remove you a little bit.
+
+107
+00:06:56,380 --> 00:07:00,620
+Loic Kandikandi: That should remove you significantly from the process.
+
+108
+00:07:01,660 --> 00:07:07,860
+Loic Kandikandi: And all that you would need to do now is just check that the final result is fine.
+
+109
+00:07:07,860 --> 00:07:15,700
+Loic Kandikandi: And hopefully you shouldn't have to make any changes yourself or you shouldn't have to ask Cursor.
+
+110
+00:07:15,700 --> 00:07:16,980
+Loic Kandikandi: Oh, this is not what I wanted.
+
+111
+00:07:18,260 --> 00:07:19,940
+Loic Kandikandi: So that is the.
+
+112
+00:07:20,900 --> 00:07:22,100
+Loic Kandikandi: I think that is what the.
+
+113
+00:07:22,340 --> 00:07:26,099
+Faizaan Chishtie: By the way, I have access to the VM now if we want to build an RPA together.
+
+114
+00:07:26,099 --> 00:07:27,060
+Faizaan Chishtie: I don't know if that would be fun.
+
+115
+00:07:29,460 --> 00:07:30,660
+Matt Kerrigan: You have access to it now?
+
+116
+00:07:31,860 --> 00:07:32,420
+Faizaan Chishtie: I don't know.
+
+117
+00:07:32,500 --> 00:07:32,900
+Saheed Akinbile: Look.
+
+118
+00:07:33,140 --> 00:07:34,820
+Matt Kerrigan: Oh, yeah, One second.
+
+119
+00:07:36,130 --> 00:07:36,530
+Matt Kerrigan: I should.
+
+120
+00:07:36,930 --> 00:07:37,490
+Faizaan Chishtie: We can.
+
+121
+00:07:38,130 --> 00:07:39,250
+Matt Kerrigan: I got a different password.
+
+122
+00:07:39,250 --> 00:07:40,250
+Matt Kerrigan: Hold on, I got a different one.
+
+123
+00:07:40,250 --> 00:07:42,050
+Matt Kerrigan: So we actually should have access to the.
+
+124
+00:07:43,250 --> 00:07:44,930
+Matt Kerrigan: Okay, it should be.
+
+125
+00:07:45,010 --> 00:07:46,610
+Matt Kerrigan: We should actually access the machine.
+
+126
+00:07:50,690 --> 00:07:51,570
+Faizaan Chishtie: Dan, Any questions?
+
+127
+00:07:51,570 --> 00:07:51,969
+Faizaan Chishtie: By the way?
+
+128
+00:07:51,969 --> 00:07:52,930
+Faizaan Chishtie: I know we're just kind of like,
+
+129
+00:07:54,930 --> 00:07:57,370
+Matt Kerrigan: yeah, yeah, Dan, go brother.
+
+130
+00:07:57,370 --> 00:07:57,890
+Dan Nguyen: Policies.
+
+131
+00:07:58,210 --> 00:08:00,210
+Dan Nguyen: Yeah, I just saw the demo.
+
+132
+00:08:00,210 --> 00:08:02,050
+Dan Nguyen: Like, it's fast to me.
+
+133
+00:08:02,050 --> 00:08:13,530
+Dan Nguyen: Like we have Lumina and then you type some prompts there and then per my understanding, you like have a server to open Cursor and then Cursor will do everything automatically.
+
+134
+00:08:13,530 --> 00:08:13,890
+Matt Kerrigan: Right.
+
+135
+00:08:13,970 --> 00:08:15,970
+Dan Nguyen: Based on input prompts on Lumina.
+
+136
+00:08:16,370 --> 00:08:16,850
+Faizaan Chishtie: Is it?
+
+137
+00:08:16,850 --> 00:08:17,330
+Dan Nguyen: Is it?
+
+138
+00:08:17,650 --> 00:08:18,130
+Faizaan Chishtie: Yeah.
+
+139
+00:08:18,610 --> 00:08:32,250
+Faizaan Chishtie: So you would basically like install like our desktop software on the virtual machine, then open Cursor, install our mcp and then basically prompt Cursor and be like,
+
+140
+00:08:32,250 --> 00:08:35,240
+Dan Nguyen: hey, I want you to build the Cursor is ship.
+
+141
+00:08:35,240 --> 00:08:38,280
+Dan Nguyen: Yeah, Cursor should be running on the virtual machine or.
+
+142
+00:08:38,280 --> 00:08:38,840
+Faizaan Chishtie: No, no.
+
+143
+00:08:38,840 --> 00:08:39,840
+Faizaan Chishtie: Your machine is fine.
+
+144
+00:08:39,840 --> 00:08:41,320
+Faizaan Chishtie: Like if you're running it on your local.
+
+145
+00:08:41,320 --> 00:08:41,679
+Faizaan Chishtie: Like.
+
+146
+00:08:41,679 --> 00:08:45,880
+Faizaan Chishtie: Like your local cursor should be able to access like the VM and like.
+
+147
+00:08:46,920 --> 00:08:48,600
+Faizaan Chishtie: Yeah, yeah, exactly.
+
+148
+00:08:48,600 --> 00:08:56,600
+Faizaan Chishtie: And then so basically, yeah, so you're prompting it and then what it's doing is it's finding like it's building out the PI auto gui, like Python scripts.
+
+149
+00:08:56,840 --> 00:09:02,110
+Faizaan Chishtie: And then once it finds the path, it creates it as like a workflow in our platform.
+
+150
+00:09:02,110 --> 00:09:12,830
+Faizaan Chishtie: And then you guys can trigger that via API and it's running like it's kind of like cloud cruises thing where you're doing it and it builds the workflow as you guys are talking and then you can trigger it afterwards.
+
+151
+00:09:16,510 --> 00:09:17,270
+Matt Kerrigan: Sorry, real quick.
+
+152
+00:09:17,270 --> 00:09:17,790
+Matt Kerrigan: Do you know that.
+
+153
+00:09:17,790 --> 00:09:18,990
+Matt Kerrigan: Do you know the machine name?
+
+154
+00:09:22,590 --> 00:09:24,030
+Loic Kandikandi: So I can try to use.
+
+155
+00:09:25,470 --> 00:09:29,780
+Matt Kerrigan: Sorry, was it Machine one or two or.
+
+156
+00:09:31,700 --> 00:09:33,380
+Matt Kerrigan: I want to make sure I'm looking at the.
+
+157
+00:09:37,700 --> 00:09:37,980
+Matt Kerrigan: End.
+
+158
+00:09:37,980 --> 00:09:38,660
+Matt Kerrigan: No, no worries.
+
+159
+00:09:38,660 --> 00:09:40,900
+Matt Kerrigan: I. I'm figuring I'm working it through one by one.
+
+160
+00:09:43,140 --> 00:09:44,460
+Loic Kandikandi: Yeah, sorry.
+
+161
+00:09:44,460 --> 00:09:45,620
+Matt Kerrigan: So y' all keep going.
+
+162
+00:09:45,620 --> 00:09:46,580
+Matt Kerrigan: I'll get the machine.
+
+163
+00:09:47,940 --> 00:09:52,460
+Faizaan Chishtie: Yeah, I mean, Dan, I don't know if it's helpful, but I have like a computer open so I can like give it.
+
+164
+00:09:52,460 --> 00:09:53,660
+Faizaan Chishtie: I can show you what it looks like.
+
+165
+00:09:53,660 --> 00:09:55,580
+Faizaan Chishtie: Maybe we can prompt.
+
+166
+00:09:55,820 --> 00:09:58,460
+Dan Nguyen: Yeah, yeah, I. I guess I. I got the point.
+
+167
+00:09:58,540 --> 00:10:01,100
+Dan Nguyen: Like the input on.
+
+168
+00:10:01,100 --> 00:10:03,420
+Dan Nguyen: On the website, the Lumina is it.
+
+169
+00:10:03,580 --> 00:10:10,780
+Dan Nguyen: Lumina should be the SOP or the prompts that we want it to build the workflow.
+
+170
+00:10:10,780 --> 00:10:11,100
+Dan Nguyen: Right.
+
+171
+00:10:11,820 --> 00:10:16,780
+Dan Nguyen: And then the iterations, we keep going prompts in the cursor.
+
+172
+00:10:16,780 --> 00:10:16,940
+Dan Nguyen: Is.
+
+173
+00:10:16,940 --> 00:10:19,390
+Dan Nguyen: Is it would do it by itself or do.
+
+174
+00:10:19,460 --> 00:10:21,140
+Dan Nguyen: Do we need to input any prompts there?
+
+175
+00:10:21,460 --> 00:10:22,580
+Faizaan Chishtie: Yeah, it'll like.
+
+176
+00:10:22,580 --> 00:10:30,380
+Faizaan Chishtie: Basically you tell it like, I want you to follow this, like do this thing and then like it might ask you like, okay, like, what happens in this case?
+
+177
+00:10:30,380 --> 00:10:32,500
+Faizaan Chishtie: But it should like iterate on itself, basically.
+
+178
+00:10:32,740 --> 00:10:42,060
+Faizaan Chishtie: Like it'll continue to just take screenshots or like inspect like what it can see like with and just continue like it'll be able to kind of self.
+
+179
+00:10:42,060 --> 00:10:42,500
+Faizaan Chishtie: Correct.
+
+180
+00:10:46,830 --> 00:10:48,150
+Dan Nguyen: Yeah, I see.
+
+181
+00:10:48,150 --> 00:10:50,990
+Dan Nguyen: Do you have the link to the demo video you just show us?
+
+182
+00:10:51,070 --> 00:10:51,790
+Faizaan Chishtie: Yeah, absolutely.
+
+183
+00:10:52,510 --> 00:10:55,550
+Faizaan Chishtie: Yeah, I can even.
+
+184
+00:11:01,630 --> 00:11:03,310
+Faizaan Chishtie: Here, let me send it in our chat.
+
+185
+00:11:03,390 --> 00:11:03,750
+Faizaan Chishtie: Sorry.
+
+186
+00:11:03,750 --> 00:11:03,990
+Matt Kerrigan: Yeah.
+
+187
+00:11:03,990 --> 00:11:05,190
+Faizaan Chishtie: We were called Laminar.
+
+188
+00:11:05,190 --> 00:11:06,190
+Faizaan Chishtie: Now we're called mini Course.
+
+189
+00:11:06,190 --> 00:11:07,070
+Faizaan Chishtie: So like it's.
+
+190
+00:11:08,430 --> 00:11:09,070
+Faizaan Chishtie: It's a little.
+
+191
+00:11:11,480 --> 00:11:12,120
+Faizaan Chishtie: But yeah,
+
+192
+00:11:21,400 --> 00:11:21,760
+Loic Kandikandi: Yeah.
+
+193
+00:11:21,760 --> 00:11:26,080
+Faizaan Chishtie: If we, if we get access to the computer, maybe we could even like.
+
+194
+00:11:26,080 --> 00:11:32,280
+Matt Kerrigan: build like access to every other machine.
+
+195
+00:11:34,600 --> 00:11:35,480
+Matt Kerrigan: God damn it.
+
+196
+00:11:42,850 --> 00:11:46,050
+Loic Kandikandi: Is the password, like updated every few days?
+
+197
+00:11:46,530 --> 00:11:46,930
+Matt Kerrigan: No.
+
+198
+00:11:47,650 --> 00:11:48,210
+Loic Kandikandi: Okay.
+
+199
+00:11:49,570 --> 00:11:54,290
+Matt Kerrigan: It does get reset now and then I found every other machine.
+
+200
+00:11:54,290 --> 00:11:55,130
+Matt Kerrigan: I think I put you on.
+
+201
+00:11:55,130 --> 00:11:56,290
+Matt Kerrigan: Well, with Hosta too.
+
+202
+00:11:56,290 --> 00:11:58,050
+Matt Kerrigan: Maybe not 100.
+
+203
+00:11:58,210 --> 00:11:58,490
+Matt Kerrigan: Sure.
+
+204
+00:11:58,490 --> 00:11:59,810
+Matt Kerrigan: What machine I put you on?
+
+205
+00:12:01,090 --> 00:12:03,580
+Matt Kerrigan: I have it working on other machines.
+
+206
+00:12:10,300 --> 00:12:11,100
+Matt Kerrigan: So dumb.
+
+207
+00:12:14,140 --> 00:12:19,820
+Matt Kerrigan: I'm actually confused because I feel like I wish I put you on a machine that someone is using right now.
+
+208
+00:12:19,900 --> 00:12:20,540
+Matt Kerrigan: Clearly.
+
+209
+00:12:24,460 --> 00:12:28,140
+Matt Kerrigan: Do you see your valid credentials delaying next attempt when you try to log in?
+
+210
+00:12:28,600 --> 00:12:31,640
+Matt Kerrigan: Yeah, we're on the same machine.
+
+211
+00:12:33,000 --> 00:12:33,400
+Matt Kerrigan: Okay.
+
+212
+00:12:33,400 --> 00:12:39,720
+Matt Kerrigan: I might just put you on another machine because it'll be easier at this point because I have it.
+
+213
+00:12:39,880 --> 00:12:40,480
+Matt Kerrigan: Literally.
+
+214
+00:12:40,480 --> 00:12:42,440
+Matt Kerrigan: The other ones are also not open.
+
+215
+00:12:43,800 --> 00:12:51,880
+Matt Kerrigan: No, nobody is assigned on them and I'm already logged in and I know the passwords on those.
+
+216
+00:12:56,690 --> 00:12:57,090
+Matt Kerrigan: Okay.
+
+217
+00:12:57,330 --> 00:12:57,930
+Matt Kerrigan: I'm just.
+
+218
+00:12:57,930 --> 00:12:58,770
+Matt Kerrigan: I'm just gonna do.
+
+219
+00:13:40,340 --> 00:13:40,500
+Loic Kandikandi: Yeah.
+
+220
+00:13:40,500 --> 00:13:40,740
+Faizaan Chishtie: Dan.
+
+221
+00:13:40,740 --> 00:13:42,980
+Faizaan Chishtie: Any other questions or it makes sense?
+
+222
+00:13:42,980 --> 00:13:43,540
+Faizaan Chishtie: I hopefully.
+
+223
+00:13:43,540 --> 00:13:44,100
+Faizaan Chishtie: I don't know.
+
+224
+00:13:44,900 --> 00:13:46,460
+Dan Nguyen: Yeah, I think I got a point.
+
+225
+00:13:46,460 --> 00:13:51,020
+Dan Nguyen: Maybe, like, maybe after we got a machine then, and we go through that again.
+
+226
+00:13:51,820 --> 00:13:57,460
+Faizaan Chishtie: Yeah, it'll be cool if we can actually, like, do it all together on the machine.
+
+227
+00:13:57,460 --> 00:13:57,780
+Dan Nguyen: Yeah.
+
+228
+00:13:57,780 --> 00:13:59,260
+Matt Kerrigan: Yeah, yeah, let's do it.
+
+229
+00:14:02,380 --> 00:14:03,020
+Matt Kerrigan: One second.
+
+230
+00:14:03,020 --> 00:14:04,620
+Matt Kerrigan: I'm almost done.
+
+231
+00:14:08,300 --> 00:14:09,180
+Matt Kerrigan: God damn it.
+
+232
+00:14:11,100 --> 00:14:11,740
+Matt Kerrigan: Stop it.
+
+233
+00:14:11,900 --> 00:14:12,700
+Matt Kerrigan: Oh, my God.
+
+234
+00:14:13,340 --> 00:14:13,740
+Matt Kerrigan: What?
+
+235
+00:14:14,140 --> 00:14:14,860
+Matt Kerrigan: Wait, what?
+
+236
+00:14:18,700 --> 00:14:18,860
+Faizaan Chishtie: Like.
+
+237
+00:14:18,860 --> 00:14:19,860
+Faizaan Chishtie: Well, we need to install.
+
+238
+00:14:19,860 --> 00:14:26,700
+Faizaan Chishtie: If it's a new computer, but we need to install the desktop service and then, like, run like, any script or.
+
+239
+00:14:28,060 --> 00:14:29,340
+Loic Kandikandi: Yeah, we managed to do that.
+
+240
+00:14:30,940 --> 00:14:31,740
+Matt Kerrigan: Right, Right.
+
+241
+00:14:31,740 --> 00:14:32,140
+Matt Kerrigan: Okay.
+
+242
+00:14:32,140 --> 00:14:37,740
+Matt Kerrigan: I really gotta figure it out then.
+
+243
+00:14:41,180 --> 00:14:41,580
+Matt Kerrigan: Me.
+
+244
+00:14:42,650 --> 00:14:42,890
+Matt Kerrigan: Yeah.
+
+245
+00:14:42,890 --> 00:14:44,050
+Matt Kerrigan: How long does the install take?
+
+246
+00:14:44,050 --> 00:14:44,810
+Matt Kerrigan: Is that bad?
+
+247
+00:14:44,810 --> 00:14:45,530
+Matt Kerrigan: Is that rough?
+
+248
+00:14:46,330 --> 00:14:48,090
+Faizaan Chishtie: It's not too bad.
+
+249
+00:14:48,090 --> 00:14:48,410
+Matt Kerrigan: Right?
+
+250
+00:14:49,130 --> 00:14:50,730
+Loic Kandikandi: It's not too bad.
+
+251
+00:14:52,010 --> 00:14:52,410
+Matt Kerrigan: Actually.
+
+252
+00:14:52,490 --> 00:14:54,170
+Matt Kerrigan: We want to see it anyway, so.
+
+253
+00:14:54,250 --> 00:14:57,210
+Matt Kerrigan: Yeah, we understand how to do this shit.
+
+254
+00:14:57,210 --> 00:14:57,530
+Matt Kerrigan: Right.
+
+255
+00:14:57,530 --> 00:14:57,930
+Matt Kerrigan: So.
+
+256
+00:14:58,410 --> 00:14:58,850
+Matt Kerrigan: Alrighty.
+
+257
+00:14:58,850 --> 00:14:59,690
+Matt Kerrigan: Hold on, hold on.
+
+258
+00:15:00,490 --> 00:15:03,650
+Faizaan Chishtie: We're trying to make the UX for installing our desktop service also better.
+
+259
+00:15:03,650 --> 00:15:05,010
+Faizaan Chishtie: So, like, you'll probably see some weird.
+
+260
+00:15:05,010 --> 00:15:07,770
+Matt Kerrigan: shit, but we're good.
+
+261
+00:15:12,260 --> 00:15:12,740
+Matt Kerrigan: Okay.
+
+262
+00:15:12,980 --> 00:15:13,780
+Matt Kerrigan: Love of God.
+
+263
+00:15:14,180 --> 00:15:17,540
+Matt Kerrigan: All right, all right.
+
+264
+00:15:18,580 --> 00:15:18,980
+Matt Kerrigan: Here.
+
+265
+00:15:19,060 --> 00:15:19,620
+Matt Kerrigan: Okay.
+
+266
+00:15:21,860 --> 00:15:24,020
+Matt Kerrigan: Here is the password.
+
+267
+00:15:24,500 --> 00:15:25,020
+Matt Kerrigan: Or that.
+
+268
+00:15:25,020 --> 00:15:25,940
+Matt Kerrigan: That's the connection.
+
+269
+00:15:25,940 --> 00:15:30,180
+Matt Kerrigan: Here's the Any desk thing.
+
+270
+00:15:30,580 --> 00:15:32,100
+Matt Kerrigan: Here's the computer password.
+
+271
+00:15:32,340 --> 00:15:33,060
+Faizaan Chishtie: Oh, thanks.
+
+272
+00:15:36,990 --> 00:15:37,390
+Matt Kerrigan: All right.
+
+273
+00:15:39,070 --> 00:15:45,150
+Matt Kerrigan: Every other machine I was walking to for walletosa, it was exclusively that one that.
+
+274
+00:15:45,230 --> 00:15:46,110
+Matt Kerrigan: I don't know what the.
+
+275
+00:15:46,510 --> 00:15:49,230
+Matt Kerrigan: I'm about to find that out later, so I'm sorry.
+
+276
+00:15:50,510 --> 00:15:51,230
+Loic Kandikandi: It's okay.
+
+277
+00:15:52,670 --> 00:15:54,790
+Matt Kerrigan: You want to share your screen on, like, how you're doing the setup?
+
+278
+00:15:54,790 --> 00:15:56,030
+Matt Kerrigan: Actually, I'm curious.
+
+279
+00:15:57,550 --> 00:16:00,030
+Loic Kandikandi: Yep, one sec.
+
+280
+00:16:02,770 --> 00:16:04,250
+Matt Kerrigan: You know, we'll go from scratch here.
+
+281
+00:16:04,250 --> 00:16:08,010
+Faizaan Chishtie: Do you guys want to also potentially do this if you, like?
+
+282
+00:16:08,010 --> 00:16:08,370
+Faizaan Chishtie: Should.
+
+283
+00:16:08,690 --> 00:16:09,050
+Matt Kerrigan: Would.
+
+284
+00:16:09,050 --> 00:16:12,290
+Faizaan Chishtie: Would you run the MCP or would we want these guys to run.
+
+285
+00:16:15,810 --> 00:16:17,010
+Loic Kandikandi: I'm fine with.
+
+286
+00:16:17,010 --> 00:16:18,690
+Faizaan Chishtie: With either if you guys want to.
+
+287
+00:16:18,770 --> 00:16:24,130
+Faizaan Chishtie: This is like, extreme experimental, but, like, if you guys Want to clone our MCP locally?
+
+288
+00:16:27,260 --> 00:16:28,940
+Matt Kerrigan: Dan, you want me to drive or you want to drive?
+
+289
+00:16:29,660 --> 00:16:30,460
+Matt Kerrigan: I can drive.
+
+290
+00:16:30,780 --> 00:16:34,220
+Faizaan Chishtie: Because ideally what happens is we install the thing on the desktop.
+
+291
+00:16:34,220 --> 00:16:35,740
+Faizaan Chishtie: This is demo syndrome maximum.
+
+292
+00:16:35,740 --> 00:16:37,740
+Faizaan Chishtie: So we're adding all points of.
+
+293
+00:16:38,300 --> 00:16:39,020
+Faizaan Chishtie: There's a lot of.
+
+294
+00:16:39,900 --> 00:16:41,060
+Matt Kerrigan: You're in YC now.
+
+295
+00:16:41,060 --> 00:16:54,480
+Matt Kerrigan: So one of the things that they're going to tell you is that actually this is literally the best way to do a demo because it creates drama.
+
+296
+00:16:57,520 --> 00:17:10,400
+Matt Kerrigan: I mean like, I mean, seriously, it's like it actually it helps because like, if it feels like something might not work, people are like way more invested.
+
+297
+00:17:10,400 --> 00:17:14,720
+Matt Kerrigan: It makes it feel so much more magical when it does work.
+
+298
+00:17:15,119 --> 00:17:15,560
+Saheed Akinbile: Cool.
+
+299
+00:17:15,560 --> 00:17:19,200
+Matt Kerrigan: So it increases the actual effectiveness of the data.
+
+300
+00:17:19,650 --> 00:17:20,050
+Matt Kerrigan: One second.
+
+301
+00:17:20,450 --> 00:17:21,010
+Saheed Akinbile: Okay.
+
+302
+00:17:21,089 --> 00:17:24,530
+Faizaan Chishtie: Oh yeah, Matt, you'll just need to create an account on.
+
+303
+00:17:24,849 --> 00:17:25,250
+Faizaan Chishtie: On.
+
+304
+00:17:28,770 --> 00:17:30,170
+Faizaan Chishtie: I'm going to send you an invite to.
+
+305
+00:17:30,170 --> 00:17:35,649
+Faizaan Chishtie: To your Toothy workspace on our platform and then you just need to create an account on our.
+
+306
+00:17:37,090 --> 00:17:44,770
+Matt Kerrigan: Okay, Let's go.
+
+307
+00:17:45,500 --> 00:17:46,140
+Matt Kerrigan: I just do.
+
+308
+00:17:55,020 --> 00:17:56,300
+Faizaan Chishtie: So, yeah, if you just sign up.
+
+309
+00:17:56,460 --> 00:17:57,980
+Faizaan Chishtie: Sorry, I don't give you a bunch of instructions.
+
+310
+00:17:57,980 --> 00:18:05,100
+Faizaan Chishtie: If you just sign up to that link with your Matuthy AI account, you should see that you have a workspace waiting for you called Toothy.
+
+311
+00:18:05,420 --> 00:18:05,980
+Matt Kerrigan: Okay.
+
+312
+00:18:06,940 --> 00:18:13,970
+Matt Kerrigan: And then here, Good solid code here.
+
+313
+00:18:19,810 --> 00:18:25,970
+Matt Kerrigan: Use the heavy model so that we give you all the maximum chance of success here.
+
+314
+00:18:28,050 --> 00:18:32,370
+Matt Kerrigan: Whole need this MCP.
+
+315
+00:18:38,080 --> 00:18:39,920
+Matt Kerrigan: Going to the dry mouth.
+
+316
+00:18:40,640 --> 00:18:41,680
+Matt Kerrigan: A new product.
+
+317
+00:18:44,240 --> 00:18:46,440
+Matt Kerrigan: All righty, Cool.
+
+318
+00:18:46,440 --> 00:18:55,360
+Matt Kerrigan: And then here, put this in my other browser then.
+
+319
+00:19:01,840 --> 00:19:03,170
+Matt Kerrigan: Or just mk2.
+
+320
+00:19:03,270 --> 00:19:03,720
+Matt Kerrigan: 3.
+
+321
+00:19:03,720 --> 00:19:08,340
+Matt Kerrigan: I guess this is welcome back.
+
+322
+00:19:09,460 --> 00:19:10,420
+Matt Kerrigan: Yeah, There we go.
+
+323
+00:19:33,710 --> 00:19:35,790
+Loic Kandikandi: Okay, so this is the.
+
+324
+00:19:36,670 --> 00:19:38,270
+Loic Kandikandi: Sorry, I'm currently installing the.
+
+325
+00:19:38,270 --> 00:19:40,670
+Loic Kandikandi: The Our desktop service.
+
+326
+00:19:43,390 --> 00:19:45,150
+Faizaan Chishtie: So you get like a URL for this?
+
+327
+00:19:48,350 --> 00:19:49,230
+Loic Kandikandi: Yeah, just.
+
+328
+00:19:49,950 --> 00:19:54,910
+Matt Kerrigan: Graham, I have accept the invitation.
+
+329
+00:19:56,120 --> 00:19:56,760
+Matt Kerrigan: I am in.
+
+330
+00:19:57,080 --> 00:19:57,720
+Faizaan Chishtie: Okay, sweet.
+
+331
+00:19:57,720 --> 00:19:58,200
+Faizaan Chishtie: You're in.
+
+332
+00:19:58,840 --> 00:19:59,320
+Matt Kerrigan: Yep.
+
+333
+00:19:59,320 --> 00:20:00,200
+Matt Kerrigan: And then I have.
+
+334
+00:20:00,280 --> 00:20:00,920
+Matt Kerrigan: Let's see here.
+
+335
+00:20:00,920 --> 00:20:09,720
+Matt Kerrigan: I got Claude here, one second doing stuff and I need the API key.
+
+336
+00:20:10,520 --> 00:20:11,240
+Matt Kerrigan: API?
+
+337
+00:20:11,879 --> 00:20:12,760
+Faizaan Chishtie: I'll give it to you.
+
+338
+00:20:16,360 --> 00:20:17,160
+Faizaan Chishtie: Here you go.
+
+339
+00:20:20,440 --> 00:20:21,560
+Faizaan Chishtie: Yeah, one thing is if.
+
+340
+00:20:21,800 --> 00:20:22,840
+Faizaan Chishtie: If you join.
+
+341
+00:20:23,240 --> 00:20:24,610
+Faizaan Chishtie: Sorry, if you.
+
+342
+00:20:25,410 --> 00:20:26,410
+Faizaan Chishtie: You'll have to run npm.
+
+343
+00:20:26,410 --> 00:20:29,890
+Faizaan Chishtie: Run setup on the mcp.
+
+344
+00:20:29,890 --> 00:20:30,450
+Matt Kerrigan: By the way.
+
+345
+00:20:31,170 --> 00:20:33,050
+Matt Kerrigan: Yeah, I just gave it to Claude.
+
+346
+00:20:33,050 --> 00:20:33,650
+Matt Kerrigan: I'm telling it.
+
+347
+00:20:33,650 --> 00:20:34,690
+Matt Kerrigan: Figure it the fuck out.
+
+348
+00:20:35,250 --> 00:20:36,050
+Faizaan Chishtie: Okay, cool.
+
+349
+00:20:36,130 --> 00:20:37,010
+Faizaan Chishtie: If you ask it.
+
+350
+00:20:37,490 --> 00:20:44,610
+Faizaan Chishtie: If you tell it, the API key is like one thing, but it'll better if you do username and password login.
+
+351
+00:20:44,930 --> 00:20:46,290
+Faizaan Chishtie: So like it'll open up like a.
+
+352
+00:20:46,290 --> 00:20:48,370
+Faizaan Chishtie: It should open up a browser page for you to sign in.
+
+353
+00:20:50,140 --> 00:20:51,740
+Matt Kerrigan: Oh, so okay, so there's.
+
+354
+00:20:52,140 --> 00:20:52,940
+Matt Kerrigan: I don't need it.
+
+355
+00:20:53,340 --> 00:20:54,220
+Matt Kerrigan: I can just tell it.
+
+356
+00:20:54,620 --> 00:20:57,820
+Matt Kerrigan: Hey, founders are telling me we can Just log in?
+
+357
+00:20:58,060 --> 00:20:58,380
+Faizaan Chishtie: Yeah.
+
+358
+00:20:58,380 --> 00:21:02,100
+Faizaan Chishtie: If you just do, and if you run npm, run setup, it'll open a browser page for you.
+
+359
+00:21:02,100 --> 00:21:03,100
+Faizaan Chishtie: You'll log in there.
+
+360
+00:21:04,940 --> 00:21:06,660
+Faizaan Chishtie: Saheed should be joining right now.
+
+361
+00:21:06,660 --> 00:21:07,740
+Faizaan Chishtie: This is my co founder.
+
+362
+00:21:10,460 --> 00:21:13,340
+Faizaan Chishtie: We're just going to enter some environment variables in.
+
+363
+00:21:14,140 --> 00:21:18,540
+Matt Kerrigan: We're going to do a really annoying thing while you watch me struggle on cloud code.
+
+364
+00:21:18,790 --> 00:21:19,030
+Matt Kerrigan: Yeah.
+
+365
+00:21:19,030 --> 00:21:19,990
+Faizaan Chishtie: Do you want to show me I can.
+
+366
+00:21:19,990 --> 00:21:20,630
+Saheed Akinbile: Yeah, yeah.
+
+367
+00:21:22,230 --> 00:21:24,430
+Loic Kandikandi: But hey, the good thing is that you can now blame it on cloud code.
+
+368
+00:21:24,430 --> 00:21:27,190
+Loic Kandikandi: If it, if it starts acting out, you can no longer.
+
+369
+00:21:28,950 --> 00:21:32,190
+Matt Kerrigan: I've done this before where I was using like an AI.
+
+370
+00:21:32,190 --> 00:21:38,310
+Matt Kerrigan: I guess this was like, probably a year ago now where I was using cursor to like do everything, like help set up with a vendor.
+
+371
+00:21:41,590 --> 00:21:42,430
+Matt Kerrigan: Wait, it's setting up?
+
+372
+00:21:42,430 --> 00:21:43,870
+Matt Kerrigan: It's tell me to log in locally.
+
+373
+00:21:43,870 --> 00:21:46,950
+Matt Kerrigan: I have 127 loop package first.
+
+374
+00:21:47,030 --> 00:21:47,750
+Faizaan Chishtie: Yeah, exactly.
+
+375
+00:21:49,190 --> 00:21:50,550
+Faizaan Chishtie: Yeah, that's where you log in.
+
+376
+00:21:51,190 --> 00:22:00,950
+Faizaan Chishtie: Hey, Saheed, we're just installing LDS one of Toothy's VMs and I think Loic might need some Cloudflare assistance.
+
+377
+00:22:01,990 --> 00:22:04,190
+Matt Kerrigan: Okay, hold on.
+
+378
+00:22:04,190 --> 00:22:07,590
+Matt Kerrigan: So I need to do all this other stuff.
+
+379
+00:22:07,590 --> 00:22:08,150
+Matt Kerrigan: One second.
+
+380
+00:22:09,350 --> 00:22:11,470
+Faizaan Chishtie: Yeah, and then you can skip your configure later.
+
+381
+00:22:11,470 --> 00:22:12,100
+Faizaan Chishtie: This is fine.
+
+382
+00:22:12,250 --> 00:22:13,530
+Matt Kerrigan: Oh, just skip all this.
+
+383
+00:22:13,610 --> 00:22:14,170
+Matt Kerrigan: Okay.
+
+384
+00:22:14,410 --> 00:22:14,970
+Faizaan Chishtie: Awesome.
+
+385
+00:22:15,050 --> 00:22:17,770
+Faizaan Chishtie: You have the MCP good close.
+
+386
+00:22:17,850 --> 00:22:19,930
+Faizaan Chishtie: Yeah, yeah, you can close it if you want to add it to cursor.
+
+387
+00:22:19,930 --> 00:22:21,130
+Faizaan Chishtie: You use cloud code.
+
+388
+00:22:21,130 --> 00:22:21,450
+Matt Kerrigan: Eh.
+
+389
+00:22:22,890 --> 00:22:23,450
+Loic Kandikandi: Okay.
+
+390
+00:22:23,770 --> 00:22:24,090
+Matt Kerrigan: Yeah.
+
+391
+00:22:24,090 --> 00:22:24,450
+Faizaan Chishtie: Okay.
+
+392
+00:22:24,450 --> 00:22:30,490
+Faizaan Chishtie: So now you should be able to be like, we'll wait now.
+
+393
+00:22:30,570 --> 00:22:34,330
+Faizaan Chishtie: So now that it's set up now we just have to wait for loic.
+
+394
+00:22:35,130 --> 00:22:35,930
+Faizaan Chishtie: Can you share this?
+
+395
+00:22:36,330 --> 00:22:37,930
+Matt Kerrigan: Oh, this is so nice.
+
+396
+00:22:38,010 --> 00:22:39,450
+Matt Kerrigan: I'm so glad they added this.
+
+397
+00:22:40,290 --> 00:22:41,530
+Matt Kerrigan: I can, like, finally.
+
+398
+00:22:41,530 --> 00:22:43,570
+Matt Kerrigan: I'm not just waiting for something like run or whatever.
+
+399
+00:22:43,570 --> 00:22:48,450
+Matt Kerrigan: Like, so you can like add, like ask a question or like do some other, like, while we're at the same place.
+
+400
+00:22:51,010 --> 00:22:51,930
+Matt Kerrigan: All right, so we're just.
+
+401
+00:22:51,930 --> 00:22:53,490
+Matt Kerrigan: We're letting it run here, I think.
+
+402
+00:22:53,650 --> 00:22:54,090
+Faizaan Chishtie: Yeah.
+
+403
+00:22:54,090 --> 00:22:59,010
+Faizaan Chishtie: So I think right now, like, what's going on your end?
+
+404
+00:22:59,010 --> 00:23:00,530
+Faizaan Chishtie: You're just setting up, just.
+
+405
+00:23:00,770 --> 00:23:03,570
+Loic Kandikandi: Just adding variables.
+
+406
+00:23:03,570 --> 00:23:03,970
+Matt Kerrigan: Sorry.
+
+407
+00:23:05,260 --> 00:23:06,620
+Loic Kandikandi: Should be absolute.
+
+408
+00:23:09,740 --> 00:23:14,180
+Faizaan Chishtie: So, yeah, the weird thing with part of our setup, I mean, I think we can show it, right?
+
+409
+00:23:14,180 --> 00:23:14,780
+Faizaan Chishtie: Like, there's not.
+
+410
+00:23:14,860 --> 00:23:15,620
+Faizaan Chishtie: It's not that bad.
+
+411
+00:23:15,620 --> 00:23:15,940
+Faizaan Chishtie: Eh.
+
+412
+00:23:15,940 --> 00:23:17,500
+Faizaan Chishtie: If we show the EMVs.
+
+413
+00:23:18,380 --> 00:23:20,620
+Matt Kerrigan: Well, yeah, I mean, we'll have to be able to.
+
+414
+00:23:20,620 --> 00:23:22,300
+Matt Kerrigan: We want to step on more machines.
+
+415
+00:23:22,380 --> 00:23:25,420
+Loic Kandikandi: Yeah, yeah.
+
+416
+00:23:25,420 --> 00:23:26,220
+Loic Kandikandi: So this is.
+
+417
+00:23:26,300 --> 00:23:29,340
+Loic Kandikandi: This is sort of the desktop service application.
+
+418
+00:23:31,190 --> 00:23:34,630
+Loic Kandikandi: Yeah, yeah, do.
+
+419
+00:23:35,350 --> 00:23:35,830
+Loic Kandikandi: Yeah.
+
+420
+00:23:35,990 --> 00:23:47,190
+Loic Kandikandi: I think so far the only thing that is that we need is just setting up the cloudflare Stuff I. Yeah.
+
+421
+00:23:48,710 --> 00:23:51,670
+Loic Kandikandi: Do you think people be able to help with this part?
+
+422
+00:23:52,710 --> 00:23:56,870
+Saheed Akinbile: Yeah, it's just a regular Cloudflare install.
+
+423
+00:23:57,430 --> 00:23:59,910
+Saheed Akinbile: So do you have the cloud for executable there?
+
+424
+00:24:01,830 --> 00:24:03,670
+Loic Kandikandi: The Cloudflare executable?
+
+425
+00:24:03,750 --> 00:24:08,150
+Loic Kandikandi: I'm not sure that I do.
+
+426
+00:24:08,230 --> 00:24:09,830
+Faizaan Chishtie: So yeah, I might have to download it.
+
+427
+00:24:11,190 --> 00:24:11,590
+Matt Kerrigan: See.
+
+428
+00:24:11,910 --> 00:24:12,590
+Faizaan Chishtie: Oh, there it is.
+
+429
+00:24:12,590 --> 00:24:14,150
+Faizaan Chishtie: Cloudflare D. I saw it.
+
+430
+00:24:15,270 --> 00:24:15,990
+Loic Kandikandi: Oh, there.
+
+431
+00:24:15,990 --> 00:24:16,550
+Loic Kandikandi: Okay, there.
+
+432
+00:24:16,550 --> 00:24:17,270
+Loic Kandikandi: There it is.
+
+433
+00:24:18,310 --> 00:24:20,550
+Loic Kandikandi: So do I just open this?
+
+434
+00:24:21,350 --> 00:24:22,880
+Saheed Akinbile: Should like run.
+
+435
+00:24:24,240 --> 00:24:28,000
+Faizaan Chishtie: Let me send this process should be like a million x easier.
+
+436
+00:24:28,080 --> 00:24:31,840
+Faizaan Chishtie: We've just been doing this a bunch on our own, so like we're like, this guy will.
+
+437
+00:24:32,560 --> 00:24:33,760
+Matt Kerrigan: No worries at all, brother.
+
+438
+00:24:33,920 --> 00:24:35,720
+Saheed Akinbile: So yeah, should the wrong tunnel.
+
+439
+00:24:35,720 --> 00:24:37,360
+Faizaan Chishtie: Should be that I'm correct.
+
+440
+00:24:37,680 --> 00:24:38,320
+Faizaan Chishtie: It's right there.
+
+441
+00:24:39,680 --> 00:24:40,240
+Loic Kandikandi: Okay.
+
+442
+00:24:46,240 --> 00:24:46,960
+Faizaan Chishtie: Did it start.
+
+443
+00:24:54,730 --> 00:24:55,850
+Saheed Akinbile: To like, check it out?
+
+444
+00:24:56,730 --> 00:24:58,010
+Saheed Akinbile: I'm not sure everything is.
+
+445
+00:24:58,490 --> 00:24:59,930
+Saheed Akinbile: No, you don't rent as admin?
+
+446
+00:25:00,010 --> 00:25:01,130
+Saheed Akinbile: No, no need for that.
+
+447
+00:25:01,130 --> 00:25:04,409
+Faizaan Chishtie: I think if you open like open window, like terminal and then like.
+
+448
+00:25:04,409 --> 00:25:08,090
+Faizaan Chishtie: Or like command prompt and then CD into it and then start run tunnel.
+
+449
+00:25:08,490 --> 00:25:09,970
+Saheed Akinbile: But I don't even think you're logged in.
+
+450
+00:25:09,970 --> 00:25:14,410
+Saheed Akinbile: Have you done any logged in login for codflow or do you want to just create a temporary tunnel?
+
+451
+00:25:14,730 --> 00:25:15,530
+Saheed Akinbile: Create a temporary.
+
+452
+00:25:16,650 --> 00:25:17,290
+Loic Kandikandi: Yeah, yeah.
+
+453
+00:25:17,370 --> 00:25:18,570
+Loic Kandikandi: Okay, yeah, let's.
+
+454
+00:25:18,570 --> 00:25:20,170
+Loic Kandikandi: Let's create a temporary tunnel.
+
+455
+00:25:21,530 --> 00:25:22,010
+Loic Kandikandi: Yeah.
+
+456
+00:25:23,130 --> 00:25:24,810
+Faizaan Chishtie: At the top of the window.
+
+457
+00:25:33,290 --> 00:25:34,970
+Faizaan Chishtie: And then run tunnel.
+
+458
+00:25:37,530 --> 00:25:38,290
+Loic Kandikandi: Oh, okay.
+
+459
+00:25:38,290 --> 00:25:38,890
+Loic Kandikandi: Like the.
+
+460
+00:25:38,970 --> 00:25:40,010
+Loic Kandikandi: Okay, yeah.
+
+461
+00:25:40,010 --> 00:25:40,650
+Matt Kerrigan: Restarting.
+
+462
+00:25:42,800 --> 00:25:44,080
+Loic Kandikandi: Sorry, what's the command?
+
+463
+00:25:44,400 --> 00:25:46,000
+Saheed Akinbile: Runtunnel bath.
+
+464
+00:25:46,000 --> 00:25:48,240
+Saheed Akinbile: Then enter run tunnel.
+
+465
+00:25:48,240 --> 00:25:48,640
+Saheed Akinbile: No.
+
+466
+00:25:53,200 --> 00:25:53,640
+Matt Kerrigan: Okay.
+
+467
+00:25:53,640 --> 00:25:55,840
+Matt Kerrigan: Oh, I think you.
+
+468
+00:25:59,600 --> 00:26:00,400
+Matt Kerrigan: I'm trying to remember.
+
+469
+00:26:00,400 --> 00:26:01,120
+Matt Kerrigan: Okay, yeah.
+
+470
+00:26:02,080 --> 00:26:03,040
+Loic Kandikandi: Oh, there is.
+
+471
+00:26:05,920 --> 00:26:06,880
+Faizaan Chishtie: Oh, you know why?
+
+472
+00:26:06,880 --> 00:26:08,800
+Faizaan Chishtie: It's probably stored as an env txt.
+
+473
+00:26:09,480 --> 00:26:10,760
+Faizaan Chishtie: So if you go back, look.
+
+474
+00:26:13,560 --> 00:26:14,200
+Loic Kandikandi: Okay.
+
+475
+00:26:17,960 --> 00:26:21,240
+Loic Kandikandi: No, it is saved as env file.
+
+476
+00:26:22,840 --> 00:26:23,280
+Faizaan Chishtie: Can we.
+
+477
+00:26:23,280 --> 00:26:23,960
+Faizaan Chishtie: LS there.
+
+478
+00:26:25,560 --> 00:26:26,120
+Loic Kandikandi: Okay.
+
+479
+00:26:26,600 --> 00:26:27,160
+Matt Kerrigan: Dir.
+
+480
+00:26:27,320 --> 00:26:28,560
+Matt Kerrigan: Dir, not ls.
+
+481
+00:26:28,560 --> 00:26:29,080
+Faizaan Chishtie: Oh, yeah, sure.
+
+482
+00:26:29,080 --> 00:26:29,480
+Faizaan Chishtie: Thanks.
+
+483
+00:26:30,040 --> 00:26:30,440
+Matt Kerrigan: Yeah.
+
+484
+00:26:30,440 --> 00:26:30,920
+Faizaan Chishtie: Cd.
+
+485
+00:26:35,330 --> 00:26:36,530
+Loic Kandikandi: Is it like the popular.
+
+486
+00:26:37,170 --> 00:26:38,210
+Loic Kandikandi: Yeah, I guess so.
+
+487
+00:26:40,690 --> 00:26:42,610
+Matt Kerrigan: Oh, yeah, I think it works.
+
+488
+00:26:43,650 --> 00:26:44,450
+Faizaan Chishtie: And then there.
+
+489
+00:26:50,930 --> 00:26:51,570
+Loic Kandikandi: You go.
+
+490
+00:26:53,490 --> 00:26:53,930
+Loic Kandikandi: Okay.
+
+491
+00:26:53,930 --> 00:26:54,650
+Loic Kandikandi: Yeah, it's.
+
+492
+00:26:54,650 --> 00:26:55,170
+Loic Kandikandi: I see.
+
+493
+00:26:55,410 --> 00:26:56,050
+Loic Kandikandi: Let's see.
+
+494
+00:26:56,370 --> 00:26:57,010
+Loic Kandikandi: It's here.
+
+495
+00:26:57,410 --> 00:26:59,690
+Matt Kerrigan: I think you're just running it from another directory, right?
+
+496
+00:26:59,690 --> 00:27:00,370
+Matt Kerrigan: So it doesn't.
+
+497
+00:27:00,370 --> 00:27:02,450
+Matt Kerrigan: It's looking okay.
+
+498
+00:27:02,450 --> 00:27:03,280
+Loic Kandikandi: Yeah, yeah.
+
+499
+00:27:03,280 --> 00:27:04,160
+Loic Kandikandi: So let's try.
+
+500
+00:27:04,160 --> 00:27:05,240
+Loic Kandikandi: Let's try doing.
+
+501
+00:27:09,000 --> 00:27:10,600
+Matt Kerrigan: two directories up, you know.
+
+502
+00:27:11,080 --> 00:27:11,560
+Loic Kandikandi: Yeah.
+
+503
+00:27:11,560 --> 00:27:13,480
+Loic Kandikandi: Okay, so what was the directory?
+
+504
+00:27:14,440 --> 00:27:15,400
+Loic Kandikandi: All right, so.
+
+505
+00:27:23,000 --> 00:27:23,920
+Loic Kandikandi: Autocompete.
+
+506
+00:27:23,920 --> 00:27:24,680
+Loic Kandikandi: That's okay.
+
+507
+00:27:28,040 --> 00:27:31,540
+Loic Kandikandi: And I think that was the.
+
+508
+00:27:33,380 --> 00:27:38,900
+Faizaan Chishtie: We can always edit the batch file, tell it where the env is.
+
+509
+00:27:41,460 --> 00:27:45,339
+Loic Kandikandi: Sorry, wait, what are you trying to.
+
+510
+00:27:45,339 --> 00:27:46,340
+Matt Kerrigan: You're just trying to run it?
+
+511
+00:27:46,820 --> 00:27:49,620
+Loic Kandikandi: Yeah, I'm trying to run the script, but from the.
+
+512
+00:27:50,500 --> 00:27:52,420
+Matt Kerrigan: If you go dot slash, I think.
+
+513
+00:27:53,700 --> 00:27:54,260
+Matt Kerrigan: Okay.
+
+514
+00:27:55,140 --> 00:27:56,460
+Faizaan Chishtie: There's a command here, by the way.
+
+515
+00:27:56,460 --> 00:27:57,060
+Faizaan Chishtie: We can Just use.
+
+516
+00:27:57,060 --> 00:27:57,380
+Faizaan Chishtie: Right.
+
+517
+00:27:57,690 --> 00:27:58,490
+Faizaan Chishtie: Actually, just edit.
+
+518
+00:27:58,650 --> 00:27:59,690
+Faizaan Chishtie: I have a great idea.
+
+519
+00:27:59,770 --> 00:28:03,370
+Faizaan Chishtie: Why don't you open the bat file and then just run it in the command prompt.
+
+520
+00:28:05,770 --> 00:28:06,530
+Loic Kandikandi: Open the.
+
+521
+00:28:06,530 --> 00:28:09,610
+Loic Kandikandi: The bat file, and then this guy.
+
+522
+00:28:09,610 --> 00:28:10,170
+Faizaan Chishtie: Clubs.
+
+523
+00:28:10,170 --> 00:28:10,570
+Matt Kerrigan: Rd.
+
+524
+00:28:10,570 --> 00:28:11,130
+Loic Kandikandi: Edit.
+
+525
+00:28:12,570 --> 00:28:13,130
+Loic Kandikandi: Yep.
+
+526
+00:28:13,930 --> 00:28:14,610
+Loic Kandikandi: Like, edit.
+
+527
+00:28:14,610 --> 00:28:15,010
+Loic Kandikandi: Oh, like.
+
+528
+00:28:15,010 --> 00:28:15,810
+Loic Kandikandi: Okay, open it.
+
+529
+00:28:15,810 --> 00:28:16,330
+Loic Kandikandi: Okay.
+
+530
+00:28:17,050 --> 00:28:17,410
+Matt Kerrigan: Open.
+
+531
+00:28:17,410 --> 00:28:18,890
+Matt Kerrigan: Will run it actually, if you.
+
+532
+00:28:19,370 --> 00:28:21,930
+Matt Kerrigan: If you, like, right below.
+
+533
+00:28:25,620 --> 00:28:28,180
+Saheed Akinbile: Okay, so replace all of this.
+
+534
+00:28:28,260 --> 00:28:30,660
+Saheed Akinbile: You can replace all of this with that, like, script to use.
+
+535
+00:28:30,660 --> 00:28:32,260
+Faizaan Chishtie: Like provider check.
+
+536
+00:28:33,780 --> 00:28:35,420
+Faizaan Chishtie: Check chat.
+
+537
+00:28:35,420 --> 00:28:35,860
+Faizaan Chishtie: Yeah.
+
+538
+00:28:36,260 --> 00:28:36,740
+Saheed Akinbile: Yeah.
+
+539
+00:28:36,820 --> 00:28:37,940
+Saheed Akinbile: Let's speed this up.
+
+540
+00:28:40,180 --> 00:28:40,580
+Matt Kerrigan: Yeah.
+
+541
+00:28:40,580 --> 00:28:40,980
+Matt Kerrigan: Cool.
+
+542
+00:28:41,460 --> 00:28:42,020
+Loic Kandikandi: All right,
+
+543
+00:28:44,340 --> 00:28:44,980
+Matt Kerrigan: that's.
+
+544
+00:28:45,540 --> 00:28:46,340
+Loic Kandikandi: Let's do this.
+
+545
+00:28:49,150 --> 00:28:50,710
+Saheed Akinbile: So you.
+
+546
+00:28:50,710 --> 00:28:54,550
+Saheed Akinbile: You want to run that from command Line from command.
+
+547
+00:28:54,550 --> 00:28:55,230
+Loic Kandikandi: Okay, cool.
+
+548
+00:28:56,830 --> 00:28:57,150
+Faizaan Chishtie: Okay.
+
+549
+00:28:57,150 --> 00:28:59,110
+Faizaan Chishtie: Maybe just paste in that or.
+
+550
+00:28:59,110 --> 00:28:59,270
+Faizaan Chishtie: No.
+
+551
+00:28:59,270 --> 00:28:59,950
+Saheed Akinbile: Yeah, yeah.
+
+552
+00:28:59,950 --> 00:29:00,150
+Matt Kerrigan: Okay.
+
+553
+00:29:00,150 --> 00:29:00,910
+Faizaan Chishtie: Yeah, let's try it.
+
+554
+00:29:03,790 --> 00:29:04,670
+Faizaan Chishtie: This is hilarious.
+
+555
+00:29:06,750 --> 00:29:07,710
+Loic Kandikandi: There's an internal.
+
+556
+00:29:07,710 --> 00:29:08,110
+Matt Kerrigan: Okay.
+
+557
+00:29:08,110 --> 00:29:09,310
+Loic Kandikandi: Oh, did I.
+
+558
+00:29:11,310 --> 00:29:12,670
+Loic Kandikandi: Okay, it's.
+
+559
+00:29:12,830 --> 00:29:13,670
+Loic Kandikandi: I'll just run the.
+
+560
+00:29:13,670 --> 00:29:15,310
+Loic Kandikandi: The command itself stuff.
+
+561
+00:29:18,990 --> 00:29:19,630
+Matt Kerrigan: Okay.
+
+562
+00:29:19,870 --> 00:29:22,390
+Saheed Akinbile: That's like partial stuff, like Windows command.
+
+563
+00:29:22,390 --> 00:29:25,710
+Saheed Akinbile: So you can remove the slash dot IN front of it.
+
+564
+00:29:25,710 --> 00:29:26,190
+Matt Kerrigan: Remove.
+
+565
+00:29:27,230 --> 00:29:30,190
+Saheed Akinbile: Remove the slash in front of it and just do Cloud fl.
+
+566
+00:29:33,070 --> 00:29:33,390
+Matt Kerrigan: So.
+
+567
+00:29:33,390 --> 00:29:33,790
+Saheed Akinbile: Yeah.
+
+568
+00:29:34,830 --> 00:29:36,350
+Loic Kandikandi: Do I have to be in the Cloud fl?
+
+569
+00:29:36,350 --> 00:29:37,390
+Faizaan Chishtie: Yeah, maybe use that.
+
+570
+00:29:38,110 --> 00:29:41,400
+Saheed Akinbile: Oh, yeah, Cloud flare is.
+
+571
+00:29:49,400 --> 00:29:49,880
+Saheed Akinbile: Yeah,
+
+572
+00:29:54,760 --> 00:29:55,400
+Loic Kandikandi: Sorry.
+
+573
+00:29:56,280 --> 00:29:57,240
+Matt Kerrigan: No worries, man.
+
+574
+00:30:01,320 --> 00:30:03,080
+Saheed Akinbile: Yeah, we have a tunnel here.
+
+575
+00:30:03,720 --> 00:30:05,240
+Saheed Akinbile: It will give you the name of the tunnel.
+
+576
+00:30:05,240 --> 00:30:06,440
+Saheed Akinbile: Just give it a sec.
+
+577
+00:30:06,790 --> 00:30:07,030
+Matt Kerrigan: Okay.
+
+578
+00:30:07,030 --> 00:30:09,590
+Faizaan Chishtie: And then, Matt, if you want to go back to your clog code now.
+
+579
+00:30:15,910 --> 00:30:16,670
+Saheed Akinbile: There you go.
+
+580
+00:30:16,670 --> 00:30:17,030
+Saheed Akinbile: Like,
+
+581
+00:30:19,910 --> 00:30:21,190
+Matt Kerrigan: you falling along, Dan.
+
+582
+00:30:21,670 --> 00:30:22,230
+Matt Kerrigan: Okay.
+
+583
+00:30:22,870 --> 00:30:24,550
+Matt Kerrigan: I thought you might have fallen asleep with us.
+
+584
+00:30:25,430 --> 00:30:26,350
+Matt Kerrigan: Okay, cool.
+
+585
+00:30:26,350 --> 00:30:32,620
+Faizaan Chishtie: Okay, so now what you want to do basically is like, let's say we want to use, like, I don't know, we want to open dental, for example.
+
+586
+00:30:32,850 --> 00:30:33,090
+Faizaan Chishtie: Right.
+
+587
+00:30:33,250 --> 00:30:34,210
+Faizaan Chishtie: And log in.
+
+588
+00:30:35,090 --> 00:30:40,530
+Matt Kerrigan: Well, so I like how like, do I have to, like, list machines or like, what am I doing with this mcp?
+
+589
+00:30:41,330 --> 00:30:43,650
+Faizaan Chishtie: So basically be like, hey, use the laminar mcp.
+
+590
+00:30:43,650 --> 00:30:46,370
+Faizaan Chishtie: I want to build an RPA on.
+
+591
+00:30:48,770 --> 00:30:56,570
+Faizaan Chishtie: I want to build an RPA to open dental on a virtual machine.
+
+592
+00:30:56,570 --> 00:30:59,980
+Faizaan Chishtie: I will give you the Cloudflare Tunnel.
+
+593
+00:31:05,020 --> 00:31:05,820
+Faizaan Chishtie: You may need to allow.
+
+594
+00:31:05,820 --> 00:31:07,500
+Matt Kerrigan: They need to know the Cloudflare tunnel.
+
+595
+00:31:10,460 --> 00:31:12,660
+Faizaan Chishtie: It should be able to be smart enough to know itself.
+
+596
+00:31:12,660 --> 00:31:16,780
+Matt Kerrigan: But we'll just start with that.
+
+597
+00:31:17,340 --> 00:31:18,380
+Matt Kerrigan: Let's see what happens.
+
+598
+00:31:21,100 --> 00:31:22,140
+Faizaan Chishtie: Let's see what happens.
+
+599
+00:31:26,870 --> 00:31:27,270
+Loic Kandikandi: Okay.
+
+600
+00:31:28,230 --> 00:31:33,190
+Loic Kandikandi: Do you want me to open dental or do you want to see.
+
+601
+00:31:34,310 --> 00:31:36,070
+Faizaan Chishtie: Oh, maybe you need to restart your.
+
+602
+00:31:38,150 --> 00:31:40,230
+Loic Kandikandi: Oh, yeah, you managed to restart cursor after.
+
+603
+00:31:40,710 --> 00:31:41,190
+Loic Kandikandi: Yeah.
+
+604
+00:31:41,670 --> 00:31:42,230
+Matt Kerrigan: Okay.
+
+605
+00:31:42,950 --> 00:31:43,510
+Matt Kerrigan: Okay.
+
+606
+00:31:44,550 --> 00:31:50,720
+Matt Kerrigan: I now MCP set up.
+
+607
+00:31:51,360 --> 00:31:53,520
+Matt Kerrigan: I think this.
+
+608
+00:31:54,320 --> 00:31:55,040
+Matt Kerrigan: Oh, don't.
+
+609
+00:31:55,040 --> 00:31:57,520
+Matt Kerrigan: Oh, not Let me paste my previous.
+
+610
+00:31:58,480 --> 00:31:59,600
+Matt Kerrigan: All right, whatever.
+
+611
+00:32:00,320 --> 00:32:05,920
+Matt Kerrigan: I want to create open dental rpa.
+
+612
+00:32:09,520 --> 00:32:09,920
+Matt Kerrigan: Just.
+
+613
+00:32:10,640 --> 00:32:11,280
+Matt Kerrigan: Okay.
+
+614
+00:32:13,120 --> 00:32:13,920
+Matt Kerrigan: Figure it out.
+
+615
+00:32:14,240 --> 00:32:15,440
+Saheed Akinbile: What terminal is this?
+
+616
+00:32:15,440 --> 00:32:16,800
+Saheed Akinbile: Man, I love the background.
+
+617
+00:32:17,540 --> 00:32:18,180
+Matt Kerrigan: Oh, this is.
+
+618
+00:32:18,340 --> 00:32:18,980
+Matt Kerrigan: I term.
+
+619
+00:32:19,220 --> 00:32:19,620
+Matt Kerrigan: This is.
+
+620
+00:32:19,620 --> 00:32:23,140
+Matt Kerrigan: I customize this for a previous company forever ago.
+
+621
+00:32:24,100 --> 00:32:27,620
+Matt Kerrigan: I never changed it because it's a dead company.
+
+622
+00:32:29,860 --> 00:32:30,260
+Loic Kandikandi: that.
+
+623
+00:32:31,140 --> 00:32:32,740
+Matt Kerrigan: Yeah, like, I forgot how I did this.
+
+624
+00:32:32,740 --> 00:32:33,700
+Matt Kerrigan: So it was like some.
+
+625
+00:32:33,700 --> 00:32:38,300
+Matt Kerrigan: Some sort of like, you take like an image and then you can put it and they like, repeat it or whatever.
+
+626
+00:32:38,300 --> 00:32:41,300
+Matt Kerrigan: I put all the nice colors and stuff.
+
+627
+00:32:43,060 --> 00:32:46,720
+Matt Kerrigan: Maybe ask cloud code to like, help you customize iturn too you.
+
+628
+00:32:47,200 --> 00:32:48,880
+Saheed Akinbile: I'm pretty sure I can figure it out.
+
+629
+00:32:49,280 --> 00:32:50,400
+Saheed Akinbile: Claude knows everything.
+
+630
+00:32:50,960 --> 00:32:53,520
+Saheed Akinbile: Nice to meet you down in person finally.
+
+631
+00:32:56,080 --> 00:32:57,280
+Dan Nguyen: Yeah, nice to meet you.
+
+632
+00:32:58,160 --> 00:32:59,520
+Faizaan Chishtie: Let's see what it percolates.
+
+633
+00:33:13,370 --> 00:33:13,850
+Matt Kerrigan: Okay.
+
+634
+00:33:14,730 --> 00:33:16,570
+Matt Kerrigan: Oh, it's reading a lot of.
+
+635
+00:33:17,850 --> 00:33:21,290
+Matt Kerrigan: Yeah, you don't need all that other.
+
+636
+00:33:21,290 --> 00:33:22,010
+Faizaan Chishtie: Oh, there it is.
+
+637
+00:33:22,010 --> 00:33:23,530
+Faizaan Chishtie: It found the mcp.
+
+638
+00:33:24,410 --> 00:33:25,170
+Faizaan Chishtie: No, it didn't.
+
+639
+00:33:25,170 --> 00:33:26,250
+Faizaan Chishtie: Okay, what was it doing?
+
+640
+00:33:26,250 --> 00:33:27,290
+Faizaan Chishtie: Yeah, yeah.
+
+641
+00:33:28,890 --> 00:33:29,610
+Faizaan Chishtie: What is it?
+
+642
+00:33:31,610 --> 00:33:35,930
+Matt Kerrigan: All you need is the lamb and our mcp.
+
+643
+00:33:36,490 --> 00:33:39,680
+Matt Kerrigan: This is separate from a lot of.
+
+644
+00:33:50,720 --> 00:33:51,280
+Faizaan Chishtie: There we go.
+
+645
+00:33:51,280 --> 00:33:51,920
+Faizaan Chishtie: Yeah, there we go.
+
+646
+00:33:51,920 --> 00:33:56,640
+Faizaan Chishtie: Okay, so now you gotta paste that URL in that URL.
+
+647
+00:33:56,640 --> 00:33:57,040
+Loic Kandikandi: Okay.
+
+648
+00:33:57,040 --> 00:33:57,320
+Matt Kerrigan: This.
+
+649
+00:33:57,320 --> 00:33:58,240
+Matt Kerrigan: Okay, got it.
+
+650
+00:33:58,480 --> 00:33:59,040
+Matt Kerrigan: Okay.
+
+651
+00:34:09,770 --> 00:34:10,090
+Faizaan Chishtie: Nice.
+
+652
+00:34:11,290 --> 00:34:13,530
+Faizaan Chishtie: Okay, Claude was able to connect.
+
+653
+00:34:13,530 --> 00:34:15,130
+Faizaan Chishtie: Let's see if it can capture a screenshot.
+
+654
+00:34:16,650 --> 00:34:17,050
+Loic Kandikandi: What.
+
+655
+00:34:17,210 --> 00:34:18,969
+Loic Kandikandi: What's the task that you want to give it?
+
+656
+00:34:20,489 --> 00:34:20,850
+Faizaan Chishtie: Okay.
+
+657
+00:34:20,850 --> 00:34:22,409
+Faizaan Chishtie: Open Dental is installed in desktop.
+
+658
+00:34:22,409 --> 00:34:22,810
+Loic Kandikandi: Yeah, let's.
+
+659
+00:34:22,810 --> 00:34:23,969
+Faizaan Chishtie: Let's tell them to do some crazy.
+
+660
+00:34:23,969 --> 00:34:24,810
+Faizaan Chishtie: Let's see what happens.
+
+661
+00:34:25,690 --> 00:34:35,360
+Matt Kerrigan: Start with just like, hey, open notepad and type you.
+
+662
+00:34:35,520 --> 00:34:36,080
+Faizaan Chishtie: Okay.
+
+663
+00:34:38,800 --> 00:34:40,159
+Saheed Akinbile: That was easy work, man.
+
+664
+00:34:40,400 --> 00:34:50,080
+Matt Kerrigan: Yeah, Let's see.
+
+665
+00:34:50,080 --> 00:34:50,480
+Loic Kandikandi: Yeah,
+
+666
+00:34:53,520 --> 00:34:54,280
+Matt Kerrigan: serious task.
+
+667
+00:34:54,280 --> 00:34:55,540
+Matt Kerrigan: I mean, dude, like, it's.
+
+668
+00:34:55,610 --> 00:34:55,929
+Matt Kerrigan: Yes.
+
+669
+00:34:57,050 --> 00:34:59,210
+Matt Kerrigan: Change these permissions at some point, but.
+
+670
+00:35:00,090 --> 00:35:00,650
+Loic Kandikandi: Whoa.
+
+671
+00:35:02,090 --> 00:35:02,650
+Saheed Akinbile: What the.
+
+672
+00:35:02,730 --> 00:35:07,210
+Faizaan Chishtie: Did it do somehow open the window bar.
+
+673
+00:35:08,090 --> 00:35:09,450
+Saheed Akinbile: I should self correct.
+
+674
+00:35:09,530 --> 00:35:14,890
+Matt Kerrigan: Yeah, There we are.
+
+675
+00:35:17,610 --> 00:35:18,570
+Matt Kerrigan: No love lost.
+
+676
+00:35:22,660 --> 00:35:23,140
+Matt Kerrigan: It's working.
+
+677
+00:35:23,220 --> 00:35:23,780
+Matt Kerrigan: Hopefully.
+
+678
+00:35:24,020 --> 00:35:24,580
+Matt Kerrigan: Yay.
+
+679
+00:35:27,860 --> 00:35:31,100
+Loic Kandikandi: Having that, like, I don't know, that felt a little.
+
+680
+00:35:31,100 --> 00:35:35,340
+Loic Kandikandi: A little personal, like having it on the screen.
+
+681
+00:35:35,340 --> 00:35:37,940
+Matt Kerrigan: I was like, sorry.
+
+682
+00:35:39,460 --> 00:35:39,940
+Matt Kerrigan: Okay.
+
+683
+00:35:39,940 --> 00:35:42,660
+Matt Kerrigan: I just wanted to test that it's working.
+
+684
+00:35:44,820 --> 00:35:45,460
+Faizaan Chishtie: Okay.
+
+685
+00:35:45,940 --> 00:35:48,420
+Faizaan Chishtie: You can also tell that to turn it into a laminar workflow.
+
+686
+00:35:48,420 --> 00:35:49,420
+Faizaan Chishtie: One thing not as well.
+
+687
+00:35:49,420 --> 00:35:50,340
+Faizaan Chishtie: You can tell it as well.
+
+688
+00:35:53,180 --> 00:35:53,900
+Matt Kerrigan: That's pretty good.
+
+689
+00:35:53,900 --> 00:35:54,700
+Matt Kerrigan: Yeah, no, I.
+
+690
+00:35:57,420 --> 00:35:59,980
+Matt Kerrigan: Let's log in to Open Dental.
+
+691
+00:36:02,620 --> 00:36:03,380
+Matt Kerrigan: Oh, my God.
+
+692
+00:36:03,380 --> 00:36:03,980
+Faizaan Chishtie: What the hell?
+
+693
+00:36:04,620 --> 00:36:05,100
+Matt Kerrigan: Okay.
+
+694
+00:36:05,100 --> 00:36:05,420
+Matt Kerrigan: Weird.
+
+695
+00:36:05,420 --> 00:36:10,460
+Matt Kerrigan: All right, let's do something real now.
+
+696
+00:36:10,940 --> 00:36:18,940
+Matt Kerrigan: I want to create a flow where we log in Open dental and.
+
+697
+00:36:24,410 --> 00:36:28,890
+Matt Kerrigan: Grab Patience, instruments, details.
+
+698
+00:36:29,610 --> 00:36:36,490
+Faizaan Chishtie: One thing you want to add also at the end, maybe just experimentally tell it that it can use UI inspect as well.
+
+699
+00:36:36,810 --> 00:36:38,970
+Faizaan Chishtie: It's like a textual representation of the ui.
+
+700
+00:36:39,530 --> 00:36:43,290
+Matt Kerrigan: Also, it uses the Accessibility Tree.
+
+701
+00:36:45,140 --> 00:36:45,940
+Faizaan Chishtie: A flavor of that.
+
+702
+00:36:45,940 --> 00:36:47,860
+Faizaan Chishtie: Yeah, like.
+
+703
+00:36:47,860 --> 00:36:48,900
+Matt Kerrigan: Well, what is it using?
+
+704
+00:36:48,900 --> 00:36:51,860
+Faizaan Chishtie: Yeah, yeah, it uses.
+
+705
+00:36:51,940 --> 00:36:54,620
+Loic Kandikandi: Yeah, the Accessibility Tree, which is.
+
+706
+00:36:54,620 --> 00:36:54,940
+Loic Kandikandi: Yeah.
+
+707
+00:36:54,940 --> 00:36:55,260
+Matt Kerrigan: Okay.
+
+708
+00:36:55,260 --> 00:36:55,580
+Matt Kerrigan: Okay.
+
+709
+00:36:55,580 --> 00:36:55,900
+Matt Kerrigan: Okay.
+
+710
+00:36:55,900 --> 00:36:56,180
+Matt Kerrigan: Cool.
+
+711
+00:36:56,180 --> 00:36:59,860
+Loic Kandikandi: Not always super reliable, but it's usually like a good start.
+
+712
+00:37:00,180 --> 00:37:01,380
+Matt Kerrigan: Gives some extra information.
+
+713
+00:37:01,540 --> 00:37:02,020
+Matt Kerrigan: Yeah.
+
+714
+00:37:02,020 --> 00:37:04,420
+Faizaan Chishtie: The more text it has, the better the screenshots.
+
+715
+00:37:04,660 --> 00:37:04,980
+Matt Kerrigan: Yeah.
+
+716
+00:37:04,980 --> 00:37:05,380
+Faizaan Chishtie: Anyways.
+
+717
+00:37:06,340 --> 00:37:07,300
+Faizaan Chishtie: All right, let's do it.
+
+718
+00:37:08,180 --> 00:37:08,660
+Dan Nguyen: Cool.
+
+719
+00:37:18,670 --> 00:37:20,030
+Matt Kerrigan: I need to get more login.
+
+720
+00:37:30,750 --> 00:37:33,790
+Saheed Akinbile: Yeah, guys, I'm gonna jump back on my previous meeting.
+
+721
+00:37:33,870 --> 00:37:34,430
+Saheed Akinbile: Okay.
+
+722
+00:37:34,430 --> 00:37:35,150
+Faizaan Chishtie: If you need me.
+
+723
+00:37:35,470 --> 00:37:36,190
+Loic Kandikandi: Thanks for your help.
+
+724
+00:37:36,680 --> 00:37:37,240
+Saheed Akinbile: Bye, everyone.
+
+725
+00:37:37,320 --> 00:37:38,200
+Saheed Akinbile: Nice to you again.
+
+726
+00:37:39,320 --> 00:37:40,120
+Matt Kerrigan: See you, brother.
+
+727
+00:37:52,040 --> 00:37:53,960
+Matt Kerrigan: Login, by the way.
+
+728
+00:38:02,850 --> 00:38:03,210
+Matt Kerrigan: Oh, wow.
+
+729
+00:38:03,210 --> 00:38:03,650
+Loic Kandikandi: Okay.
+
+730
+00:38:04,290 --> 00:38:18,450
+Matt Kerrigan: I'm.
+
+731
+00:38:20,210 --> 00:38:20,890
+Matt Kerrigan: Let me tell.
+
+732
+00:39:01,590 --> 00:39:03,830
+Matt Kerrigan: I've never interacted the accessibility tree before.
+
+733
+00:39:04,310 --> 00:39:06,270
+Matt Kerrigan: I'm really curious about, like.
+
+734
+00:39:06,270 --> 00:39:08,230
+Matt Kerrigan: Like, how much information is actually there.
+
+735
+00:39:09,910 --> 00:39:10,310
+Loic Kandikandi: This.
+
+736
+00:39:10,550 --> 00:39:10,950
+Loic Kandikandi: This.
+
+737
+00:39:11,350 --> 00:39:13,590
+Loic Kandikandi: This view may not be the most.
+
+738
+00:39:14,550 --> 00:39:19,120
+Loic Kandikandi: I guess, like super fun friendly.
+
+739
+00:39:21,360 --> 00:39:21,720
+Loic Kandikandi: If.
+
+740
+00:39:21,720 --> 00:39:23,560
+Loic Kandikandi: If it doesn't work, worst case we can just.
+
+741
+00:39:23,560 --> 00:39:23,960
+Loic Kandikandi: Yeah.
+
+742
+00:39:23,960 --> 00:39:24,320
+Loic Kandikandi: Okay.
+
+743
+00:39:24,320 --> 00:39:24,800
+Loic Kandikandi: I was gonna.
+
+744
+00:39:24,800 --> 00:39:25,200
+Loic Kandikandi: I was gonna.
+
+745
+00:39:25,200 --> 00:39:25,560
+Loic Kandikandi: Oh, wow.
+
+746
+00:39:25,560 --> 00:39:26,000
+Loic Kandikandi: Okay.
+
+747
+00:39:26,160 --> 00:39:26,720
+Loic Kandikandi: That was.
+
+748
+00:39:28,560 --> 00:39:29,080
+Matt Kerrigan: Okay.
+
+749
+00:39:29,080 --> 00:39:32,200
+Matt Kerrigan: So I. I just clicked one of the appointment blocks.
+
+750
+00:39:32,200 --> 00:39:36,880
+Matt Kerrigan: I was wondering if I was going to be able to like, search quickly to, like, look for a specific patient.
+
+751
+00:39:45,130 --> 00:39:46,250
+Matt Kerrigan: Not gonna be here.
+
+752
+00:39:51,450 --> 00:39:52,090
+Matt Kerrigan: I don't.
+
+753
+00:39:52,170 --> 00:39:58,490
+Matt Kerrigan: I don't think the insurance, though, is on this view.
+
+754
+00:39:58,650 --> 00:39:59,050
+Matt Kerrigan: But.
+
+755
+00:40:01,690 --> 00:40:02,250
+Loic Kandikandi: you can.
+
+756
+00:40:03,370 --> 00:40:03,850
+Loic Kandikandi: Yeah.
+
+757
+00:40:05,050 --> 00:40:07,690
+Matt Kerrigan: Going to want to be able to.
+
+758
+00:40:07,850 --> 00:40:15,520
+Matt Kerrigan: So as to be specific patient and then go to their family file.
+
+759
+00:40:18,240 --> 00:40:21,520
+Matt Kerrigan: They'll look up their info.
+
+760
+00:40:22,160 --> 00:40:25,840
+Matt Kerrigan: I think we will always have a patient.
+
+761
+00:40:28,160 --> 00:40:29,160
+Faizaan Chishtie: Is it finding like.
+
+762
+00:40:29,160 --> 00:40:30,800
+Faizaan Chishtie: I think it's like opening a page.
+
+763
+00:40:31,600 --> 00:40:32,040
+Faizaan Chishtie: Matt.
+
+764
+00:40:32,040 --> 00:40:32,240
+Loic Kandikandi: Yeah.
+
+765
+00:40:32,240 --> 00:40:32,560
+Loic Kandikandi: Yeah.
+
+766
+00:40:33,280 --> 00:40:33,920
+Matt Kerrigan: Okay.
+
+767
+00:40:34,400 --> 00:40:35,120
+Matt Kerrigan: Oh, yeah.
+
+768
+00:40:35,120 --> 00:40:35,560
+Matt Kerrigan: Nice.
+
+769
+00:40:35,560 --> 00:40:37,450
+Matt Kerrigan: Okay, there you go.
+
+770
+00:40:37,770 --> 00:40:38,330
+Faizaan Chishtie: Holy.
+
+771
+00:40:39,370 --> 00:40:43,450
+Matt Kerrigan: This is one that id.
+
+772
+00:40:46,250 --> 00:40:46,810
+Matt Kerrigan: You're.
+
+773
+00:40:49,450 --> 00:40:50,010
+Matt Kerrigan: Okay.
+
+774
+00:40:50,330 --> 00:40:50,970
+Matt Kerrigan: Update.
+
+775
+00:40:51,610 --> 00:40:53,850
+Matt Kerrigan: You're on the family file.
+
+776
+00:40:55,050 --> 00:41:00,970
+Matt Kerrigan: You're going to want to double click the greed.
+
+777
+00:41:04,340 --> 00:41:05,660
+Matt Kerrigan: Is my computer facing up?
+
+778
+00:41:05,660 --> 00:41:06,100
+Loic Kandikandi: Okay.
+
+779
+00:41:06,500 --> 00:41:07,820
+Matt Kerrigan: My keyboard dying.
+
+780
+00:41:07,820 --> 00:41:09,140
+Matt Kerrigan: So that was happening.
+
+781
+00:41:12,180 --> 00:41:31,630
+Matt Kerrigan: So green area to get more insurance details, but let's put patient ID lookup so we can add that to the flow.
+
+782
+00:41:31,630 --> 00:41:31,910
+Matt Kerrigan: Okay.
+
+783
+00:41:31,910 --> 00:41:33,310
+Matt Kerrigan: So it's already running as scripts and.
+
+784
+00:41:36,910 --> 00:41:37,950
+Faizaan Chishtie: Yeah, I think it's trying to.
+
+785
+00:41:38,510 --> 00:41:41,230
+Matt Kerrigan: Is it already, like, it's executing this stuff on the.
+
+786
+00:41:41,230 --> 00:41:44,270
+Matt Kerrigan: On the fly or is it, like building out the whole flow right now?
+
+787
+00:41:44,590 --> 00:41:47,950
+Faizaan Chishtie: So right now it's like, figuring out, like, it's trying to figure out how to copy stuff.
+
+788
+00:41:47,950 --> 00:41:48,190
+Faizaan Chishtie: Right?
+
+789
+00:41:52,190 --> 00:41:53,190
+Loic Kandikandi: I was going to say the same thing.
+
+790
+00:41:53,190 --> 00:41:53,530
+Loic Kandikandi: Yeah.
+
+791
+00:41:55,520 --> 00:41:55,840
+Faizaan Chishtie: Yeah.
+
+792
+00:41:56,080 --> 00:41:59,080
+Faizaan Chishtie: It'll figure out the path and then it should be like.
+
+793
+00:41:59,080 --> 00:42:07,760
+Faizaan Chishtie: And then at the end you're like, okay, now let's do the whole workflow from like, login to this and, like, build that as a workflow and laminar in the toothy workspace.
+
+794
+00:42:12,080 --> 00:42:14,320
+Faizaan Chishtie: Sorry, I'm just gonna run kind of like the.
+
+795
+00:42:14,400 --> 00:42:15,440
+Faizaan Chishtie: She can run to the bathroom.
+
+796
+00:42:15,440 --> 00:42:19,210
+Faizaan Chishtie: I'll be back in like two seconds.
+
+797
+00:43:15,700 --> 00:43:16,180
+Matt Kerrigan: Okay.
+
+798
+00:43:18,500 --> 00:43:23,460
+Matt Kerrigan: So we have to copy the clipboard for all this still yeah, so that is.
+
+799
+00:43:24,100 --> 00:43:26,940
+Matt Kerrigan: Yeah, no, I don't like that.
+
+800
+00:43:26,940 --> 00:43:27,220
+Matt Kerrigan: Yeah.
+
+801
+00:43:27,220 --> 00:43:27,460
+Saheed Akinbile: Okay.
+
+802
+00:43:27,460 --> 00:43:30,340
+Matt Kerrigan: So its intuitions aren't wholly there yet.
+
+803
+00:43:30,740 --> 00:43:43,460
+Matt Kerrigan: It should know that like screenshots on like a resolution like this is going to have risk so it's going to need to know to like copy the fields to be like the more things.
+
+804
+00:43:43,540 --> 00:43:44,020
+Matt Kerrigan: Yeah.
+
+805
+00:43:44,500 --> 00:43:45,500
+Matt Kerrigan: General rule.
+
+806
+00:43:45,500 --> 00:43:48,740
+Matt Kerrigan: But okay.
+
+807
+00:43:51,940 --> 00:43:57,940
+Matt Kerrigan: Misread but again but I have to double check.
+
+808
+00:43:57,940 --> 00:43:58,500
+Dan Nguyen: Okay.
+
+809
+00:43:58,980 --> 00:43:59,380
+Matt Kerrigan: So.
+
+810
+00:44:04,990 --> 00:44:05,350
+Matt Kerrigan: Okay.
+
+811
+00:44:05,350 --> 00:44:05,710
+Matt Kerrigan: So.
+
+812
+00:44:09,470 --> 00:44:09,950
+Matt Kerrigan: Yep.
+
+813
+00:44:17,150 --> 00:44:18,990
+Matt Kerrigan: Is this screenshot stuff?
+
+814
+00:44:23,070 --> 00:44:32,720
+Matt Kerrigan: I don't want the screenshot because I think that's going to be unreliable.
+
+815
+00:44:37,600 --> 00:44:38,000
+Matt Kerrigan: Data.
+
+816
+00:44:43,680 --> 00:44:46,400
+Matt Kerrigan: It'll better to probably work for now.
+
+817
+00:44:48,320 --> 00:44:59,050
+Matt Kerrigan: There's another thing I've been wondering too for a while is like if there's like some other way of accessing this data other than like Accessibility Tree or like whatever else.
+
+818
+00:44:59,050 --> 00:45:01,930
+Matt Kerrigan: Like this is a really even date myself.
+
+819
+00:45:02,730 --> 00:45:06,330
+Matt Kerrigan: Like I used this thing called Cheat Engine when I was a child.
+
+820
+00:45:06,810 --> 00:45:09,210
+Matt Kerrigan: Like fuck with like computer games stuff.
+
+821
+00:45:09,610 --> 00:45:10,210
+Matt Kerrigan: It was, it's.
+
+822
+00:45:10,210 --> 00:45:10,450
+Matt Kerrigan: It's.
+
+823
+00:45:10,450 --> 00:45:16,010
+Matt Kerrigan: It's a program that lets you like you could like search for values on your computer.
+
+824
+00:45:17,130 --> 00:45:18,170
+Dan Nguyen: You change the money.
+
+825
+00:45:18,810 --> 00:45:19,610
+Matt Kerrigan: Yeah, exactly.
+
+826
+00:45:19,610 --> 00:45:21,450
+Matt Kerrigan: Change the money, change the speed.
+
+827
+00:45:22,190 --> 00:45:22,750
+Matt Kerrigan: Exactly.
+
+828
+00:45:23,550 --> 00:45:36,270
+Matt Kerrigan: See if you could do something or whatever and you know, for like back when Flash games were still supported in a thing this would work because it wasn't doing like network requests to server to check how much monies you had, you know.
+
+829
+00:45:36,270 --> 00:45:43,150
+Matt Kerrigan: But like, or like if it's like a local game, you know, just on your machine you can like edit the actual values itself.
+
+830
+00:45:43,390 --> 00:46:06,600
+Matt Kerrigan: Something that's like I've thought a lot about is like if you could like with the information that you have on the screen, you might be able to create another way of programmatically accessing this data that doesn't involve taking all these actions and stuff to steal the data from the screen and find some way to consistently read the value of what's being shown or something.
+
+831
+00:46:06,680 --> 00:46:12,040
+Matt Kerrigan: But I'm not sure exactly how hard that is, but just showing it.
+
+832
+00:46:15,170 --> 00:46:16,130
+Faizaan Chishtie: Yeah, that makes sense.
+
+833
+00:46:16,290 --> 00:46:17,090
+Matt Kerrigan: It would be cool.
+
+834
+00:46:17,330 --> 00:46:18,530
+Matt Kerrigan: Accessibility Tree.
+
+835
+00:46:19,650 --> 00:46:22,090
+Matt Kerrigan: It seems like it doesn't which is unfortunate.
+
+836
+00:46:22,090 --> 00:46:26,530
+Matt Kerrigan: I mean you would really think the accessibility, you think it would somehow show this data here.
+
+837
+00:46:27,010 --> 00:46:28,690
+Faizaan Chishtie: You know, it's the data on the back.
+
+838
+00:46:29,010 --> 00:46:34,210
+Loic Kandikandi: It's, it's interesting from what I remember yesterday when I was.
+
+839
+00:46:34,210 --> 00:46:41,480
+Loic Kandikandi: Or two days ago when I was building this out is I had to like the benefit information grid.
+
+840
+00:46:41,480 --> 00:46:44,120
+Loic Kandikandi: As if like that we have on this on the screen.
+
+841
+00:46:44,600 --> 00:46:56,920
+Loic Kandikandi: It doesn't, I don't know, its design isn't super accessible which means that we can't use the uxibility tree to extract all the information.
+
+842
+00:46:57,320 --> 00:46:58,920
+Loic Kandikandi: But I noticed that when we.
+
+843
+00:46:58,920 --> 00:47:04,000
+Loic Kandikandi: When I double clicked on the benefit information table, it opened a new.
+
+844
+00:47:04,000 --> 00:47:07,170
+Loic Kandikandi: A new model modal that.
+
+845
+00:47:07,330 --> 00:47:08,170
+Loic Kandikandi: Where you could kind.
+
+846
+00:47:08,170 --> 00:47:08,650
+Loic Kandikandi: I guess.
+
+847
+00:47:08,650 --> 00:47:09,450
+Loic Kandikandi: I suppose that's.
+
+848
+00:47:09,450 --> 00:47:09,690
+Loic Kandikandi: That's.
+
+849
+00:47:09,690 --> 00:47:10,690
+Loic Kandikandi: That's the modal that you.
+
+850
+00:47:10,690 --> 00:47:11,970
+Loic Kandikandi: That's the edit modal.
+
+851
+00:47:12,210 --> 00:47:15,250
+Loic Kandikandi: And that one seemed to be more.
+
+852
+00:47:16,370 --> 00:47:18,170
+Loic Kandikandi: More RPA friendly.
+
+853
+00:47:18,170 --> 00:47:20,890
+Loic Kandikandi: I guess so.
+
+854
+00:47:20,890 --> 00:47:27,090
+Loic Kandikandi: But that is like an interruption that I guess cursor cannot really like deduce.
+
+855
+00:47:28,450 --> 00:47:29,170
+Loic Kandikandi: But yeah.
+
+856
+00:47:30,770 --> 00:47:47,010
+Matt Kerrigan: Click on the benefit table and check if you're able to get info programmatically from the dilly tree.
+
+857
+00:47:47,250 --> 00:47:52,770
+Faizaan Chishtie: There might also be clipboard or maybe there might be a print option too.
+
+858
+00:47:53,970 --> 00:47:56,290
+Matt Kerrigan: You would be able to copy stuff from.
+
+859
+00:47:58,620 --> 00:47:59,660
+Matt Kerrigan: That's a good question too.
+
+860
+00:47:59,660 --> 00:48:00,740
+Matt Kerrigan: Is there a print option?
+
+861
+00:48:00,740 --> 00:48:02,700
+Matt Kerrigan: I've never actually asked myself that question.
+
+862
+00:48:03,500 --> 00:48:03,980
+Loic Kandikandi: Yeah.
+
+863
+00:48:11,340 --> 00:48:11,900
+Matt Kerrigan: Okay.
+
+864
+00:48:23,030 --> 00:48:23,390
+Loic Kandikandi: Okay.
+
+865
+00:48:23,390 --> 00:48:25,110
+Loic Kandikandi: Yeah, this is the one.
+
+866
+00:48:26,630 --> 00:48:30,470
+Loic Kandikandi: But then the challenge that I remember running into is that the.
+
+867
+00:48:30,710 --> 00:48:31,990
+Loic Kandikandi: The resolution was too.
+
+868
+00:48:32,790 --> 00:48:33,350
+Matt Kerrigan: Yeah.
+
+869
+00:48:33,910 --> 00:48:36,990
+Matt Kerrigan: Small and it could do it for a screenshot.
+
+870
+00:48:36,990 --> 00:48:37,430
+Matt Kerrigan: Yeah.
+
+871
+00:48:37,430 --> 00:48:37,910
+Matt Kerrigan: Yeah.
+
+872
+00:48:37,990 --> 00:48:39,750
+Matt Kerrigan: Totally mist.
+
+873
+00:48:56,560 --> 00:48:56,880
+Matt Kerrigan: Oh.
+
+874
+00:48:59,120 --> 00:49:01,120
+Matt Kerrigan: So you see it is able to get the data.
+
+875
+00:49:03,120 --> 00:49:05,920
+Matt Kerrigan: All benefields are accessible, but they all share the same.
+
+876
+00:49:28,250 --> 00:49:29,449
+Matt Kerrigan: L. Not rose.
+
+877
+00:49:33,450 --> 00:49:34,530
+Matt Kerrigan: You can select all.
+
+878
+00:49:34,530 --> 00:49:39,130
+Matt Kerrigan: I think it can like control and then you can exp.
+
+879
+00:49:39,450 --> 00:49:41,400
+Matt Kerrigan: Maybe figured you can do that here.
+
+880
+00:49:45,720 --> 00:49:49,880
+Matt Kerrigan: Yeah.
+
+881
+00:49:52,120 --> 00:49:55,880
+Matt Kerrigan: Is where a lot of these programs are a pain in the ass.
+
+882
+00:49:58,920 --> 00:49:59,480
+Loic Kandikandi: Yeah.
+
+883
+00:50:04,120 --> 00:50:05,080
+Loic Kandikandi: Historically with.
+
+884
+00:50:06,210 --> 00:50:09,170
+Loic Kandikandi: Historically what was done in the.
+
+885
+00:50:09,410 --> 00:50:15,810
+Loic Kandikandi: We've done in the past is like finding like a new path that gets us the same.
+
+886
+00:50:16,050 --> 00:50:19,090
+Loic Kandikandi: Like that gets us like the same results.
+
+887
+00:50:21,090 --> 00:50:21,570
+Loic Kandikandi: Yeah.
+
+888
+00:50:22,370 --> 00:50:22,690
+Loic Kandikandi: Like.
+
+889
+00:50:22,690 --> 00:50:23,010
+Loic Kandikandi: Yeah.
+
+890
+00:50:23,010 --> 00:50:23,970
+Loic Kandikandi: Usually the print.
+
+891
+00:50:24,370 --> 00:50:24,730
+Loic Kandikandi: Yeah.
+
+892
+00:50:24,730 --> 00:50:26,610
+Loic Kandikandi: Like if there's a way to like print information.
+
+893
+00:50:29,810 --> 00:50:32,610
+Matt Kerrigan: Tried some keyboard that closed it out clearly or something.
+
+894
+00:50:33,570 --> 00:50:33,970
+Loic Kandikandi: Yeah.
+
+895
+00:50:35,650 --> 00:50:40,850
+Loic Kandikandi: But yeah, it seems like it wasn't able to get the data.
+
+896
+00:50:42,050 --> 00:50:42,450
+Matt Kerrigan: Yeah.
+
+897
+00:50:42,450 --> 00:50:45,890
+Matt Kerrigan: We have to go in and I know that you can grab this.
+
+898
+00:50:48,929 --> 00:50:52,530
+Matt Kerrigan: You might tell it specifically what to do in this case.
+
+899
+00:50:59,420 --> 00:51:00,940
+Matt Kerrigan: Looks like it's like almost like a little.
+
+900
+00:51:05,500 --> 00:51:06,060
+Matt Kerrigan: Yeah.
+
+901
+00:51:07,340 --> 00:51:16,340
+Matt Kerrigan: Some of the action that it's taking here that it's confused by, I think other programs too early up on these.
+
+902
+00:51:16,340 --> 00:51:18,860
+Matt Kerrigan: Like, it is also.
+
+903
+00:51:19,500 --> 00:51:26,100
+Loic Kandikandi: It is also a little strange because it does seem like the option to copy rows exists and it's just not like.
+
+904
+00:51:26,660 --> 00:51:30,260
+Matt Kerrigan: Yeah, you have to select multiple is what it is.
+
+905
+00:51:30,340 --> 00:51:31,540
+Matt Kerrigan: Like let me.
+
+906
+00:51:32,740 --> 00:51:34,100
+Matt Kerrigan: Am I allowed to log in?
+
+907
+00:51:35,380 --> 00:51:37,060
+Matt Kerrigan: I'll tell it to stop for a second.
+
+908
+00:51:38,260 --> 00:51:38,660
+Matt Kerrigan: Stop.
+
+909
+00:51:38,900 --> 00:51:42,340
+Matt Kerrigan: Or let me with it.
+
+910
+00:51:44,180 --> 00:51:45,620
+Matt Kerrigan: Okay, let's do it.
+
+911
+00:51:46,580 --> 00:51:49,700
+Matt Kerrigan: All right, I got open.
+
+912
+00:51:55,710 --> 00:51:56,190
+Dan Nguyen: Okay.
+
+913
+00:51:56,750 --> 00:51:58,190
+Matt Kerrigan: We do this really fast.
+
+914
+00:51:59,390 --> 00:52:00,110
+Matt Kerrigan: Let's just see.
+
+915
+00:52:00,110 --> 00:52:01,310
+Matt Kerrigan: I mean we.
+
+916
+00:52:01,550 --> 00:52:12,750
+Matt Kerrigan: We can just try and like let it build a flow from Grab whatever stuff like something like this I think isn't like strictly necessary.
+
+917
+00:52:12,750 --> 00:52:13,390
+Matt Kerrigan: Let's see.
+
+918
+00:52:14,190 --> 00:52:15,150
+Matt Kerrigan: How do I do this?
+
+919
+00:52:23,480 --> 00:52:23,880
+Dan Nguyen: Okay,
+
+920
+00:52:26,360 --> 00:52:27,240
+Matt Kerrigan: there is a way.
+
+921
+00:52:27,240 --> 00:52:29,000
+Matt Kerrigan: I did this before.
+
+922
+00:52:38,440 --> 00:52:40,280
+Matt Kerrigan: Might just be a dumb thing too.
+
+923
+00:52:40,760 --> 00:52:42,600
+Matt Kerrigan: So let's click into this and then let's.
+
+924
+00:52:43,510 --> 00:52:44,230
+Matt Kerrigan: Okay, hold on.
+
+925
+00:52:44,230 --> 00:52:45,150
+Matt Kerrigan: No, no, no.
+
+926
+00:52:45,150 --> 00:52:45,430
+Matt Kerrigan: Don't.
+
+927
+00:52:45,430 --> 00:52:45,910
+Matt Kerrigan: Whatever.
+
+928
+00:52:45,910 --> 00:52:46,310
+Matt Kerrigan: Don't.
+
+929
+00:52:46,310 --> 00:52:47,190
+Matt Kerrigan: Don't change things.
+
+930
+00:52:54,150 --> 00:52:56,150
+Matt Kerrigan: Yeah, I think it might just be like a default.
+
+931
+00:53:00,710 --> 00:53:01,510
+Matt Kerrigan: Lame bro.
+
+932
+00:53:02,950 --> 00:53:04,230
+Matt Kerrigan: Dan, you've done this before.
+
+933
+00:53:05,350 --> 00:53:07,510
+Matt Kerrigan: You remember anything on this stuff?
+
+934
+00:53:12,480 --> 00:53:13,360
+Dan Nguyen: Sorry, I don't.
+
+935
+00:53:13,760 --> 00:53:16,080
+Matt Kerrigan: Yeah, no, no worries.
+
+936
+00:53:20,000 --> 00:53:21,920
+Matt Kerrigan: Are we able to tap through these fields?
+
+937
+00:53:21,920 --> 00:53:22,880
+Matt Kerrigan: Okay, that's.
+
+938
+00:53:22,960 --> 00:53:24,880
+Matt Kerrigan: That's probably the fastest way.
+
+939
+00:53:27,200 --> 00:53:29,480
+Faizaan Chishtie: Yeah, yeah, that makes sense.
+
+940
+00:53:29,480 --> 00:53:30,160
+Matt Kerrigan: Can you like.
+
+941
+00:53:31,040 --> 00:53:35,930
+Loic Kandikandi: Can you like select multiple fields all at once or do you just have to tap through.
+
+942
+00:53:35,930 --> 00:53:36,650
+Loic Kandikandi: Through everything?
+
+943
+00:53:38,090 --> 00:53:40,890
+Matt Kerrigan: I don't know how to hit shift.
+
+944
+00:53:41,770 --> 00:53:42,170
+Matt Kerrigan: No.
+
+945
+00:53:42,810 --> 00:53:45,210
+Loic Kandikandi: What happens if you click the edit button at the.
+
+946
+00:53:45,610 --> 00:53:46,490
+Loic Kandikandi: At the very.
+
+947
+00:53:46,490 --> 00:53:47,370
+Loic Kandikandi: At the end of the room?
+
+948
+00:53:47,450 --> 00:53:52,010
+Matt Kerrigan: It's going to bring up another thing to like edit that specific build like this specific row.
+
+949
+00:53:52,010 --> 00:53:53,130
+Matt Kerrigan: That's how it's going to work.
+
+950
+00:53:54,010 --> 00:53:54,650
+Matt Kerrigan: And then.
+
+951
+00:54:01,790 --> 00:54:02,270
+Matt Kerrigan: Hold on.
+
+952
+00:54:03,310 --> 00:54:03,750
+Matt Kerrigan: Wow.
+
+953
+00:54:03,750 --> 00:54:04,750
+Matt Kerrigan: The tab does not.
+
+954
+00:54:05,310 --> 00:54:07,150
+Matt Kerrigan: It doesn't track over here either.
+
+955
+00:54:07,390 --> 00:54:08,350
+Matt Kerrigan: Self helping.
+
+956
+00:54:10,990 --> 00:54:11,710
+Matt Kerrigan: I hope it's not.
+
+957
+00:54:18,590 --> 00:54:20,950
+Matt Kerrigan: Week too heavy access to a lot of this.
+
+958
+00:54:20,950 --> 00:54:25,670
+Matt Kerrigan: But like I said, I mean.
+
+959
+00:54:25,670 --> 00:54:36,730
+Matt Kerrigan: Yeah, I've described to you like do this stuff, Select this.
+
+960
+00:54:36,730 --> 00:54:37,450
+Matt Kerrigan: Like what the.
+
+961
+00:54:38,890 --> 00:54:39,690
+Loic Kandikandi: I feel like.
+
+962
+00:54:41,850 --> 00:54:43,130
+Matt Kerrigan: Oh, that's crazy.
+
+963
+00:54:44,810 --> 00:54:46,010
+Matt Kerrigan: Anyway, okay.
+
+964
+00:54:46,170 --> 00:54:48,650
+Matt Kerrigan: We have to with it more to know.
+
+965
+00:54:50,170 --> 00:54:55,760
+Matt Kerrigan: I'm gonna go back one last thing and then let's see if there's any kind of.
+
+966
+00:54:56,640 --> 00:54:58,120
+Matt Kerrigan: Your question about the print thing.
+
+967
+00:54:58,120 --> 00:55:00,480
+Matt Kerrigan: Really did have me wondering.
+
+968
+00:55:04,480 --> 00:55:06,720
+Matt Kerrigan: Is that you, Lin?
+
+969
+00:55:07,760 --> 00:55:11,680
+Matt Kerrigan: Or is my machine become sentient and started.
+
+970
+00:55:12,080 --> 00:55:12,600
+Saheed Akinbile: I'm not.
+
+971
+00:55:12,600 --> 00:55:13,760
+Loic Kandikandi: I'm not doing anything.
+
+972
+00:55:14,080 --> 00:55:14,640
+Matt Kerrigan: Okay.
+
+973
+00:55:14,720 --> 00:55:16,800
+Matt Kerrigan: There was a mouse move and I was like, what the hell?
+
+974
+00:55:20,330 --> 00:55:21,290
+Loic Kandikandi: Oh wait, so this is.
+
+975
+00:55:21,290 --> 00:55:22,090
+Loic Kandikandi: It's not you?
+
+976
+00:55:23,450 --> 00:55:24,330
+Matt Kerrigan: No, this is me.
+
+977
+00:55:24,410 --> 00:55:27,930
+Matt Kerrigan: There was another mouse that like dragged up the computer there for a second.
+
+978
+00:55:33,690 --> 00:55:34,330
+Matt Kerrigan: Yep.
+
+979
+00:55:34,410 --> 00:55:35,890
+Matt Kerrigan: So yeah, it just sucks.
+
+980
+00:55:35,890 --> 00:55:36,130
+Matt Kerrigan: I think.
+
+981
+00:55:36,130 --> 00:55:37,330
+Matt Kerrigan: I think you have to tap through.
+
+982
+00:55:37,330 --> 00:55:38,850
+Matt Kerrigan: I mean it did grab it.
+
+983
+00:55:38,850 --> 00:55:40,650
+Matt Kerrigan: Grab this stuff via like screenshot.
+
+984
+00:55:42,170 --> 00:55:42,890
+Matt Kerrigan: I'm just like.
+
+985
+00:55:42,970 --> 00:55:44,170
+Matt Kerrigan: I'm afraid to do.
+
+986
+00:55:47,060 --> 00:55:49,300
+Matt Kerrigan: It's got to be another way to access this stuff, man.
+
+987
+00:55:49,780 --> 00:55:50,180
+Loic Kandikandi: Like.
+
+988
+00:55:54,500 --> 00:56:00,420
+Matt Kerrigan: Anyway, I'll look into that and I'll give you a tool let you know.
+
+989
+00:56:00,420 --> 00:56:02,100
+Matt Kerrigan: But I think like.
+
+990
+00:56:03,540 --> 00:56:09,540
+Matt Kerrigan: I think there is a world where it's like if you had to have it zoom in and take a screenshot and then transcribe.
+
+991
+00:56:09,540 --> 00:56:10,930
+Matt Kerrigan: I guess it's.
+
+992
+00:56:11,000 --> 00:56:11,800
+Matt Kerrigan: I'm scared of that.
+
+993
+00:56:13,080 --> 00:56:13,640
+Faizaan Chishtie: Yeah.
+
+994
+00:56:17,000 --> 00:56:20,320
+Matt Kerrigan: It's not even like what's annoying about it too.
+
+995
+00:56:20,320 --> 00:56:25,160
+Matt Kerrigan: Is that like, if I copy this, like, does it actually even.
+
+996
+00:56:26,280 --> 00:56:28,200
+Matt Kerrigan: Like, because it's a categorical data.
+
+997
+00:56:28,200 --> 00:56:29,080
+Matt Kerrigan: Like, does it even.
+
+998
+00:56:29,880 --> 00:56:32,920
+Matt Kerrigan: No, no, it doesn't.
+
+999
+00:56:41,810 --> 00:56:42,130
+Matt Kerrigan: Yeah.
+
+1000
+00:56:42,130 --> 00:56:42,690
+Matt Kerrigan: Okay.
+
+1001
+00:56:48,210 --> 00:56:49,250
+Matt Kerrigan: Yeah, it's done.
+
+1002
+00:56:50,930 --> 00:56:52,610
+Matt Kerrigan: Well, we'll talk about that later.
+
+1003
+00:56:56,450 --> 00:57:05,330
+Matt Kerrigan: For now, I think we'll tell it to come here and just grab the benefits that it already has and we'll see if we can get it to edit later.
+
+1004
+00:57:05,490 --> 00:57:07,090
+Matt Kerrigan: So let's just see if it's able to do it.
+
+1005
+00:57:07,090 --> 00:57:10,440
+Matt Kerrigan: Okay, that's not cooperating.
+
+1006
+00:57:11,320 --> 00:57:19,960
+Matt Kerrigan: Let's just grab the info that we can see on the family file for now.
+
+1007
+00:57:33,490 --> 00:57:33,730
+Matt Kerrigan: It.
+
+1008
+00:58:08,300 --> 00:58:10,940
+Faizaan Chishtie: I think you might need to allow the mcp.
+
+1009
+00:58:15,020 --> 00:58:47,670
+Matt Kerrigan: Oh, sorry, I was reading email, like, So is it trying to make a workflow here?
+
+1010
+00:58:47,750 --> 00:58:49,030
+Faizaan Chishtie: Yeah, here's the link.
+
+1011
+00:58:49,750 --> 00:58:51,510
+Faizaan Chishtie: It's in your workspace in Toothy.
+
+1012
+00:58:52,180 --> 00:58:53,740
+Faizaan Chishtie: I just sent the link in the Google chat.
+
+1013
+00:58:53,740 --> 00:58:54,220
+Matt Kerrigan: Is it.
+
+1014
+00:58:54,220 --> 00:58:55,300
+Matt Kerrigan: Oh, okay.
+
+1015
+00:58:55,700 --> 00:58:56,140
+Faizaan Chishtie: Okay.
+
+1016
+00:58:56,140 --> 00:58:56,820
+Matt Kerrigan: Super sick.
+
+1017
+00:58:58,340 --> 00:58:58,740
+Matt Kerrigan: See.
+
+1018
+00:59:03,380 --> 00:59:03,980
+Matt Kerrigan: Oh, don't.
+
+1019
+00:59:03,980 --> 00:59:05,300
+Matt Kerrigan: Don't let me log in again.
+
+1020
+00:59:08,820 --> 00:59:11,140
+Matt Kerrigan: Okay, see.
+
+1021
+00:59:18,030 --> 00:59:19,230
+Matt Kerrigan: Has it added anything yet?
+
+1022
+00:59:19,550 --> 00:59:20,590
+Matt Kerrigan: Am I supposed to be.
+
+1023
+00:59:20,750 --> 00:59:22,270
+Matt Kerrigan: I'm seeing create steps.
+
+1024
+00:59:22,270 --> 00:59:24,350
+Matt Kerrigan: So it has a workflow created.
+
+1025
+00:59:24,510 --> 00:59:24,990
+Faizaan Chishtie: Oh yeah.
+
+1026
+00:59:24,990 --> 00:59:26,430
+Faizaan Chishtie: I think it just tests right now.
+
+1027
+00:59:27,710 --> 00:59:28,430
+Faizaan Chishtie: Potentially.
+
+1028
+00:59:28,670 --> 00:59:29,150
+Matt Kerrigan: Cool.
+
+1029
+00:59:32,270 --> 00:59:33,070
+Matt Kerrigan: It's cool.
+
+1030
+00:59:35,070 --> 00:59:36,350
+Matt Kerrigan: How you feeling about this so far?
+
+1031
+00:59:39,390 --> 00:59:43,390
+Dan Nguyen: Yeah, I think it's a quick tool that helps depth to do the stuff.
+
+1032
+00:59:44,720 --> 00:59:44,920
+Loic Kandikandi: Yeah.
+
+1033
+00:59:44,920 --> 00:59:51,160
+Dan Nguyen: I'm trying to register on Lamina, but it seems to me that I can log in right now.
+
+1034
+00:59:51,160 --> 00:59:51,440
+Dan Nguyen: But.
+
+1035
+00:59:52,160 --> 00:59:53,760
+Dan Nguyen: Yeah, accept the two team.
+
+1036
+00:59:53,920 --> 00:59:54,400
+Dan Nguyen: Yeah.
+
+1037
+00:59:54,640 --> 00:59:58,000
+Dan Nguyen: Let me try to check the workflow.
+
+1038
+00:59:58,080 --> 00:59:59,040
+Faizaan Chishtie: Yeah, it's od.
+
+1039
+00:59:59,040 --> 00:59:59,360
+Dan Nguyen: Yeah.
+
+1040
+00:59:59,360 --> 01:00:00,320
+Dan Nguyen: What I can learn.
+
+1041
+01:00:00,880 --> 01:00:01,320
+Dan Nguyen: Yeah.
+
+1042
+01:00:01,320 --> 01:00:08,480
+Dan Nguyen: What I consider is that like if I'm familiar with the dev team because we are the one who try to create a workflow.
+
+1043
+01:00:08,960 --> 01:00:18,290
+Dan Nguyen: We know how to use, we know how to prompt and in the end we have a workflow in Python used by all gui.
+
+1044
+01:00:21,970 --> 01:00:22,330
+Dan Nguyen: Sorry.
+
+1045
+01:00:22,330 --> 01:00:26,370
+Dan Nguyen: But what I concerned here is that like someone might not really familiar with coding.
+
+1046
+01:00:26,850 --> 01:00:32,050
+Dan Nguyen: Like they might refer like drag and drop components into the workflow.
+
+1047
+01:00:32,610 --> 01:00:34,210
+Faizaan Chishtie: Yeah, yeah.
+
+1048
+01:00:35,940 --> 01:00:36,530
+Faizaan Chishtie: So sorry, Matt.
+
+1049
+01:00:36,530 --> 01:00:41,050
+Faizaan Chishtie: This is something we're just fighting with the mcp.
+
+1050
+01:00:41,770 --> 01:00:42,730
+Faizaan Chishtie: Can you tell it?
+
+1051
+01:00:43,290 --> 01:00:47,490
+Faizaan Chishtie: Please use Laminar's format for the RPA scripts.
+
+1052
+01:00:47,490 --> 01:00:48,770
+Faizaan Chishtie: You just put the Python.
+
+1053
+01:00:48,770 --> 01:00:50,810
+Faizaan Chishtie: Like it shouldn't just be Python.
+
+1054
+01:00:58,650 --> 01:00:59,130
+Saheed Akinbile: Yeah.
+
+1055
+01:01:00,090 --> 01:01:09,590
+Faizaan Chishtie: If you check the platform, Matt, if you have it open wherever you can see that it's kind of tossed in like the PI UI automation stuff.
+
+1056
+01:01:09,590 --> 01:01:10,430
+Faizaan Chishtie: We just need to have it.
+
+1057
+01:01:12,270 --> 01:01:13,950
+Matt Kerrigan: I'm seeing login to open dental now.
+
+1058
+01:01:13,950 --> 01:01:16,350
+Matt Kerrigan: Navigate to family, extract details.
+
+1059
+01:01:17,150 --> 01:01:17,630
+Matt Kerrigan: Yes.
+
+1060
+01:01:17,790 --> 01:01:19,630
+Faizaan Chishtie: So that just needs to be wrapped like that's.
+
+1061
+01:01:19,630 --> 01:01:23,910
+Faizaan Chishtie: We don't have like raw Python code.
+
+1062
+01:01:23,910 --> 01:01:24,270
+Matt Kerrigan: Yeah,
+
+1063
+01:01:26,910 --> 01:01:27,230
+Faizaan Chishtie: yeah.
+
+1064
+01:01:27,230 --> 01:01:35,850
+Faizaan Chishtie: We don't have raw Python code normally, like, if you take a look at like one of the other workflows, there's like something to send the Python code to the vm.
+
+1065
+01:01:36,090 --> 01:01:38,490
+Faizaan Chishtie: So this would just not work, but.
+
+1066
+01:01:38,970 --> 01:01:39,530
+Matt Kerrigan: Okay.
+
+1067
+01:01:40,170 --> 01:01:41,290
+Matt Kerrigan: Is it still wrong?
+
+1068
+01:01:42,890 --> 01:01:44,090
+Faizaan Chishtie: Yeah, if not, I can.
+
+1069
+01:01:48,010 --> 01:01:48,570
+Matt Kerrigan: Okay.
+
+1070
+01:01:49,210 --> 01:01:50,650
+Matt Kerrigan: What is it supposed to be?
+
+1071
+01:01:51,690 --> 01:01:52,850
+Faizaan Chishtie: Yeah, it's supposed to be like.
+
+1072
+01:01:52,850 --> 01:02:00,900
+Faizaan Chishtie: I don't know, if you have like an example, maybe we can show like a. Yeah, there we go.
+
+1073
+01:02:01,540 --> 01:02:02,020
+Loic Kandikandi: Sorry,
+
+1074
+01:02:05,620 --> 01:02:06,420
+Faizaan Chishtie: this is just.
+
+1075
+01:02:06,420 --> 01:02:07,700
+Faizaan Chishtie: We're trying to get away from our.
+
+1076
+01:02:07,780 --> 01:02:12,100
+Faizaan Chishtie: Like, this is like remnants of like our old product, which was like an API integration tool.
+
+1077
+01:02:12,980 --> 01:02:14,500
+Faizaan Chishtie: So we have like, it says.
+
+1078
+01:02:14,500 --> 01:02:16,180
+Matt Kerrigan: It says it's figuring it out now.
+
+1079
+01:02:16,180 --> 01:02:18,020
+Matt Kerrigan: So hold on, give it a second here.
+
+1080
+01:02:21,790 --> 01:02:22,030
+Faizaan Chishtie: it.
+
+1081
+01:02:55,000 --> 01:02:56,520
+Faizaan Chishtie: Okay, it's nearly there.
+
+1082
+01:02:57,960 --> 01:02:58,840
+Faizaan Chishtie: You can say.
+
+1083
+01:02:59,000 --> 01:03:02,080
+Faizaan Chishtie: So if you check the workspace now it's kind of put it in the right format.
+
+1084
+01:03:02,080 --> 01:03:05,240
+Faizaan Chishtie: But what we want to use is not channel id.
+
+1085
+01:03:05,480 --> 01:03:07,640
+Faizaan Chishtie: This is again, something we're fixing with the mcp.
+
+1086
+01:03:08,040 --> 01:03:10,200
+Faizaan Chishtie: We want it to use the Cloudflare tunnel.
+
+1087
+01:03:10,680 --> 01:03:13,810
+Faizaan Chishtie: So you can tell it like, please use the Cloudflare tunnel pattern.
+
+1088
+01:03:15,330 --> 01:03:18,290
+Faizaan Chishtie: An HTTP request instead of channel.
+
+1089
+01:03:35,650 --> 01:03:36,290
+Loic Kandikandi: Got it.
+
+1090
+01:03:36,450 --> 01:03:36,850
+Faizaan Chishtie: Yeah.
+
+1091
+01:03:36,850 --> 01:03:37,250
+Faizaan Chishtie: So there's.
+
+1092
+01:03:37,250 --> 01:03:38,530
+Faizaan Chishtie: There's two ways to connect.
+
+1093
+01:03:38,530 --> 01:03:40,050
+Faizaan Chishtie: Like, channel is like pub sub.
+
+1094
+01:03:41,480 --> 01:03:42,520
+Faizaan Chishtie: So we have our own pub sub.
+
+1095
+01:03:43,400 --> 01:03:45,000
+Faizaan Chishtie: Otherwise we use Cloudflare tunnel.
+
+1096
+01:04:03,080 --> 01:04:11,780
+Faizaan Chishtie: I updated a system prompt yesterday for this thing, so maybe it's because if it's stupid, you might need to just give it this as context.
+
+1097
+01:04:13,380 --> 01:04:14,500
+Faizaan Chishtie: I might just say, like,
+
+1098
+01:04:22,020 --> 01:04:22,500
+Loic Kandikandi: They give.
+
+1099
+01:04:22,500 --> 01:04:25,660
+Matt Kerrigan: someone to like, search so that it knows, like, when doing this stuff.
+
+1100
+01:04:25,660 --> 01:04:32,420
+Matt Kerrigan: Like, it's like it's a tool or there's a lot of different ways you can implement this to as needed.
+
+1101
+01:04:32,710 --> 01:04:33,430
+Faizaan Chishtie: It figured out.
+
+1102
+01:04:33,430 --> 01:04:33,750
+Faizaan Chishtie: Yeah.
+
+1103
+01:04:33,750 --> 01:04:34,630
+Faizaan Chishtie: Yeah, that makes sense.
+
+1104
+01:04:37,190 --> 01:04:39,750
+Faizaan Chishtie: Yeah, it should be like a tool call or something to create the.
+
+1105
+01:05:03,200 --> 01:05:03,920
+Matt Kerrigan: It's cool though.
+
+1106
+01:05:04,720 --> 01:05:05,400
+Matt Kerrigan: We'll see how.
+
+1107
+01:05:05,400 --> 01:05:07,440
+Matt Kerrigan: I guess we'll see if it just works.
+
+1108
+01:05:09,200 --> 01:05:10,400
+Faizaan Chishtie: Yeah, my explode.
+
+1109
+01:05:10,880 --> 01:05:13,080
+Matt Kerrigan: I don't have a patience right now.
+
+1110
+01:05:13,080 --> 01:05:13,480
+Matt Kerrigan: Let's see.
+
+1111
+01:05:13,480 --> 01:05:14,640
+Matt Kerrigan: That's the only issue.
+
+1112
+01:05:17,520 --> 01:05:24,240
+Matt Kerrigan: Also, like, resetting state is still something like, I imagine I would like build a flow to do that or something like that.
+
+1113
+01:05:25,640 --> 01:05:25,960
+Faizaan Chishtie: Yeah,
+
+1114
+01:05:28,680 --> 01:05:40,120
+Saheed Akinbile: we've had like something called Smart Launch where it checks the current state or decide if it needs to close the application or needs to close specific windows to like restore stuff.
+
+1115
+01:05:42,680 --> 01:05:43,080
+Faizaan Chishtie: Lo.
+
+1116
+01:05:43,080 --> 01:05:44,760
+Faizaan Chishtie: Can you check the workflow to just check.
+
+1117
+01:05:44,760 --> 01:05:46,200
+Faizaan Chishtie: I think it's like, nearly correct.
+
+1118
+01:05:46,200 --> 01:05:46,600
+Faizaan Chishtie: Sorry.
+
+1119
+01:05:47,160 --> 01:05:48,960
+Faizaan Chishtie: But anyways, Matt, if you go back to.
+
+1120
+01:05:48,960 --> 01:05:54,400
+Faizaan Chishtie: If you open up like our platform on your screen, I can show you what the next steps are.
+
+1121
+01:06:06,080 --> 01:06:06,320
+Faizaan Chishtie: So.
+
+1122
+01:06:06,320 --> 01:06:07,600
+Faizaan Chishtie: Yeah, if you refresh the page.
+
+1123
+01:06:08,720 --> 01:06:14,320
+Faizaan Chishtie: Yeah, Yeah.
+
+1124
+01:06:14,320 --> 01:06:15,040
+Faizaan Chishtie: If you like open.
+
+1125
+01:06:15,280 --> 01:06:18,520
+Faizaan Chishtie: Login into Open Dental, for example, at first thing.
+
+1126
+01:06:22,840 --> 01:06:24,200
+Faizaan Chishtie: And you scroll to the bottom.
+
+1127
+01:06:27,800 --> 01:06:28,040
+Matt Kerrigan: so.
+
+1128
+01:06:28,040 --> 01:06:29,400
+Faizaan Chishtie: there's that red thing.
+
+1129
+01:06:29,400 --> 01:06:30,920
+Faizaan Chishtie: Config, tunnel, URL.
+
+1130
+01:06:32,040 --> 01:06:33,719
+Faizaan Chishtie: So that's like our environment variable thing.
+
+1131
+01:06:33,719 --> 01:06:35,720
+Faizaan Chishtie: If you control click it or command click it.
+
+1132
+01:06:35,720 --> 01:06:37,000
+Faizaan Chishtie: Like if you're on Mac,
+
+1133
+01:06:40,600 --> 01:06:41,040
+Matt Kerrigan: you would.
+
+1134
+01:06:41,040 --> 01:06:44,530
+Faizaan Chishtie: give it a name like, I don't know, like clinic 1, 2, 3.
+
+1135
+01:06:53,810 --> 01:06:55,130
+Faizaan Chishtie: Yeah, this is the logical name.
+
+1136
+01:06:55,130 --> 01:06:59,049
+Faizaan Chishtie: And then, yeah, if you want to give it like a, I don't know, some kind of an ID or whatever, this is going to be the same one.
+
+1137
+01:06:59,049 --> 01:07:03,410
+Faizaan Chishtie: And then, yeah, you want to paste the value of the tunnel that I sent in the chat.
+
+1138
+01:07:04,770 --> 01:07:07,250
+Faizaan Chishtie: That circulation previous jumping thing.
+
+1139
+01:07:10,060 --> 01:07:10,460
+Faizaan Chishtie: Oh yeah.
+
+1140
+01:07:10,460 --> 01:07:12,060
+Faizaan Chishtie: Without the slash execute, I think.
+
+1141
+01:07:12,060 --> 01:07:13,020
+Faizaan Chishtie: Oh, yeah, sorry.
+
+1142
+01:07:13,100 --> 01:07:14,540
+Faizaan Chishtie: If you command, click it again.
+
+1143
+01:07:17,340 --> 01:07:19,660
+Faizaan Chishtie: Yeah, just remove the slash execute.
+
+1144
+01:07:19,660 --> 01:07:20,220
+Faizaan Chishtie: That's my bad.
+
+1145
+01:07:24,300 --> 01:07:24,859
+Matt Kerrigan: Yeah.
+
+1146
+01:07:25,260 --> 01:07:27,220
+Faizaan Chishtie: This is how we would reuse different things.
+
+1147
+01:07:27,220 --> 01:07:31,180
+Faizaan Chishtie: Per, like, will the HTTP request work with this form?
+
+1148
+01:07:35,750 --> 01:07:36,630
+Faizaan Chishtie: You're muted, by the way.
+
+1149
+01:07:38,550 --> 01:07:41,950
+Loic Kandikandi: Yeah, it might work, but yeah, it'll work.
+
+1150
+01:07:41,950 --> 01:07:42,470
+Matt Kerrigan: It'll work.
+
+1151
+01:07:42,790 --> 01:07:43,830
+Faizaan Chishtie: Should we close that?
+
+1152
+01:07:43,830 --> 01:07:44,790
+Loic Kandikandi: I think we just need to.
+
+1153
+01:07:48,390 --> 01:07:48,870
+Loic Kandikandi: Sorry.
+
+1154
+01:07:49,350 --> 01:07:50,069
+Faizaan Chishtie: Should we close.
+
+1155
+01:07:50,069 --> 01:07:50,550
+Matt Kerrigan: Sorry.
+
+1156
+01:07:50,550 --> 01:07:52,470
+Loic Kandikandi: We need the Lab HP request check.
+
+1157
+01:07:54,070 --> 01:07:55,190
+Faizaan Chishtie: Oh, yeah, it's not even.
+
+1158
+01:07:55,190 --> 01:07:56,150
+Faizaan Chishtie: Sorry, this is the.
+
+1159
+01:07:57,350 --> 01:08:00,720
+Faizaan Chishtie: Yeah, can you.
+
+1160
+01:08:01,200 --> 01:08:01,920
+Faizaan Chishtie: Yeah, sorry.
+
+1161
+01:08:02,000 --> 01:08:03,040
+Faizaan Chishtie: Actually, do you want to.
+
+1162
+01:08:03,120 --> 01:08:03,880
+Faizaan Chishtie: This is annoying.
+
+1163
+01:08:03,880 --> 01:08:04,200
+Faizaan Chishtie: Sorry.
+
+1164
+01:08:04,200 --> 01:08:07,160
+Faizaan Chishtie: Matt, if you click on the bottom right, that chat there on the bottom right.
+
+1165
+01:08:07,160 --> 01:08:08,080
+Faizaan Chishtie: Lami AI.
+
+1166
+01:08:10,160 --> 01:08:12,000
+Faizaan Chishtie: Can you, do you think we can prompt it here?
+
+1167
+01:08:12,560 --> 01:08:13,080
+Faizaan Chishtie: Loic.
+
+1168
+01:08:13,080 --> 01:08:13,920
+Faizaan Chishtie: What would we say?
+
+1169
+01:08:18,080 --> 01:08:18,720
+Loic Kandikandi: Update.
+
+1170
+01:08:19,200 --> 01:08:22,800
+Loic Kandikandi: Yeah, we basically want the HTTP request,
+
+1171
+01:08:24,720 --> 01:08:26,490
+Faizaan Chishtie: so, so please use Lambda HTTP.
+
+1172
+01:08:26,490 --> 01:08:28,890
+Loic Kandikandi: for the API steps.
+
+1173
+01:08:28,890 --> 01:08:31,770
+Loic Kandikandi: Yeah, yeah, use Lambda HTTP request.
+
+1174
+01:08:32,649 --> 01:08:33,450
+Matt Kerrigan: Use what?
+
+1175
+01:08:36,970 --> 01:08:39,569
+Loic Kandikandi: Lamb HTTP request.
+
+1176
+01:08:39,569 --> 01:08:42,170
+Loic Kandikandi: It's, it's a keyword from one of.
+
+1177
+01:08:42,170 --> 01:08:45,210
+Loic Kandikandi: Yeah, Lamb HTTP request.
+
+1178
+01:08:45,450 --> 01:08:47,529
+Matt Kerrigan: Yeah, this lamb?
+
+1179
+01:08:48,090 --> 01:08:53,520
+Loic Kandikandi: Yeah, yeah, lamb like lam.
+
+1180
+01:08:56,000 --> 01:08:58,520
+Faizaan Chishtie: Yeah, yeah, for the request.
+
+1181
+01:08:58,520 --> 01:08:58,960
+Faizaan Chishtie: Let's see.
+
+1182
+01:09:01,120 --> 01:09:03,120
+Faizaan Chishtie: This should be ironed out in the mcp.
+
+1183
+01:09:04,640 --> 01:09:07,920
+Faizaan Chishtie: Or maybe we could spin up another agent to go and edit it.
+
+1184
+01:09:09,840 --> 01:09:10,960
+Faizaan Chishtie: That is so annoying.
+
+1185
+01:09:11,040 --> 01:09:15,359
+Faizaan Chishtie: Okay, do you want me to just quickly do this mat.
+
+1186
+01:09:15,520 --> 01:09:16,840
+Faizaan Chishtie: Because it's like I said, tax thing.
+
+1187
+01:09:21,069 --> 01:09:21,310
+Matt Kerrigan: I mean.
+
+1188
+01:09:21,310 --> 01:09:22,790
+Matt Kerrigan: Yeah, I get the idea.
+
+1189
+01:09:22,790 --> 01:09:29,950
+Matt Kerrigan: I think the, like, I, I, I, I suspect that this will work once you all like, have it configured and.
+
+1190
+01:09:30,270 --> 01:09:31,109
+Faizaan Chishtie: Yeah, give me one second.
+
+1191
+01:09:31,109 --> 01:09:32,430
+Faizaan Chishtie: I'll do it in two seconds.
+
+1192
+01:09:32,670 --> 01:09:38,590
+Faizaan Chishtie: Workspace and make the RPA right format.
+
+1193
+01:09:38,590 --> 01:09:40,029
+Faizaan Chishtie: It's not currently.
+
+1194
+01:09:43,158 --> 01:09:43,559
+Matt Kerrigan: Yeah,
+
+1195
+01:09:46,359 --> 01:09:47,319
+Faizaan Chishtie: give me one second.
+
+1196
+01:10:08,050 --> 01:10:08,290
+Matt Kerrigan: It.
+
+1197
+01:10:41,500 --> 01:10:42,540
+Loic Kandikandi: Did something happen?
+
+1198
+01:10:43,580 --> 01:10:48,140
+Faizaan Chishtie: I am just, I'm just updating the workflow.
+
+1199
+01:10:50,460 --> 01:10:51,340
+Faizaan Chishtie: Give me one second.
+
+1200
+01:10:51,420 --> 01:10:51,900
+Faizaan Chishtie: Sorry.
+
+1201
+01:10:53,980 --> 01:10:54,620
+Faizaan Chishtie: It's doing.
+
+1202
+01:10:54,940 --> 01:11:02,380
+Faizaan Chishtie: So the MCP can also like, edit like the code, like outside of it connecting to a vm.
+
+1203
+01:11:02,380 --> 01:11:05,540
+Faizaan Chishtie: So like, if you guys need to, like, change stuff on, like, the code itself.
+
+1204
+01:11:05,540 --> 01:11:07,900
+Faizaan Chishtie: You can always just use the MCP and be like,
+
+1205
+01:11:16,380 --> 01:11:16,940
+Matt Kerrigan: Are we good?
+
+1206
+01:11:16,940 --> 01:11:17,700
+Matt Kerrigan: Like, what's.
+
+1207
+01:11:17,700 --> 01:11:18,380
+Matt Kerrigan: Where are we at?
+
+1208
+01:11:18,460 --> 01:11:19,180
+Faizaan Chishtie: Give me one second.
+
+1209
+01:11:19,180 --> 01:11:20,060
+Faizaan Chishtie: Sorry, I was just updating.
+
+1210
+01:12:25,690 --> 01:12:26,210
+Matt Kerrigan: Okay, sorry.
+
+1211
+01:12:26,210 --> 01:12:27,050
+Matt Kerrigan: It's just updating.
+
+1212
+01:12:41,860 --> 01:12:44,020
+Matt Kerrigan: Like, like.
+
+1213
+01:13:00,900 --> 01:13:01,540
+Matt Kerrigan: Okay,
+
+1214
+01:13:22,090 --> 01:13:22,410
+Dan Nguyen: Okay.
+
+1215
+01:13:22,410 --> 01:13:22,970
+Faizaan Chishtie: It should.
+
+1216
+01:13:22,970 --> 01:13:24,530
+Faizaan Chishtie: It should have been updated now.
+
+1217
+01:13:24,530 --> 01:13:25,610
+Faizaan Chishtie: Let's take a look.
+
+1218
+01:13:36,340 --> 01:13:37,460
+Faizaan Chishtie: If you scroll to the bottom.
+
+1219
+01:13:37,940 --> 01:13:38,780
+Faizaan Chishtie: Yeah, okay, sweet.
+
+1220
+01:13:38,780 --> 01:13:40,100
+Faizaan Chishtie: Okay, that should be right.
+
+1221
+01:13:40,100 --> 01:13:40,580
+Faizaan Chishtie: Like, right.
+
+1222
+01:13:40,580 --> 01:13:40,900
+Faizaan Chishtie: Look,
+
+1223
+01:13:47,540 --> 01:13:48,420
+Loic Kandikandi: It looks good.
+
+1224
+01:13:48,739 --> 01:13:49,500
+Faizaan Chishtie: Okay, let's.
+
+1225
+01:13:49,500 --> 01:13:50,340
+Loic Kandikandi: Yeah, looks good.
+
+1226
+01:13:50,820 --> 01:13:52,900
+Loic Kandikandi: Do you have the configurations, though?
+
+1227
+01:13:53,220 --> 01:13:54,780
+Faizaan Chishtie: Oh, yeah, we just need these.
+
+1228
+01:13:54,780 --> 01:13:55,300
+Faizaan Chishtie: Sorry.
+
+1229
+01:13:58,670 --> 01:13:59,310
+Faizaan Chishtie: Yeah, I guess.
+
+1230
+01:14:02,350 --> 01:14:07,870
+Loic Kandikandi: Yeah, copy the cluster URL value for this.
+
+1231
+01:14:08,110 --> 01:14:10,670
+Loic Kandikandi: Yeah, yeah, it renamed it.
+
+1232
+01:14:10,670 --> 01:14:11,470
+Loic Kandikandi: Renamed it.
+
+1233
+01:14:14,190 --> 01:14:15,070
+Faizaan Chishtie: And then we need.
+
+1234
+01:14:15,550 --> 01:14:19,310
+Loic Kandikandi: Yeah, you can also remove the API key or.
+
+1235
+01:14:20,670 --> 01:14:21,870
+Loic Kandikandi: Currently not enforced.
+
+1236
+01:14:24,230 --> 01:14:25,550
+Faizaan Chishtie: But yeah, let's just put a value in.
+
+1237
+01:14:25,550 --> 01:14:27,510
+Faizaan Chishtie: Because then just put like 1, 2, 3 or something.
+
+1238
+01:14:27,510 --> 01:14:29,310
+Faizaan Chishtie: Yeah, yeah, it's fine.
+
+1239
+01:14:29,310 --> 01:14:31,710
+Faizaan Chishtie: And then API key as well.
+
+1240
+01:14:31,710 --> 01:14:32,870
+Loic Kandikandi: Same thing for your gate.
+
+1241
+01:14:35,990 --> 01:14:37,350
+Loic Kandikandi: Just put a dummy value.
+
+1242
+01:14:41,830 --> 01:14:42,870
+Matt Kerrigan: Yeah, all good.
+
+1243
+01:14:43,750 --> 01:14:48,630
+Loic Kandikandi: Yeah, yeah, go for it.
+
+1244
+01:14:48,950 --> 01:14:51,760
+Matt Kerrigan: Oh, and anything else set?
+
+1245
+01:14:51,760 --> 01:14:55,400
+Matt Kerrigan: I need to do all this or we all.
+
+1246
+01:14:55,400 --> 01:14:56,160
+Matt Kerrigan: We all good now?
+
+1247
+01:14:57,120 --> 01:14:58,000
+Loic Kandikandi: Should be good.
+
+1248
+01:14:58,640 --> 01:14:59,840
+Faizaan Chishtie: Just make sure that's the case.
+
+1249
+01:15:00,240 --> 01:15:01,120
+Matt Kerrigan: That run then.
+
+1250
+01:15:02,560 --> 01:15:03,760
+Faizaan Chishtie: Yeah, let's see what happens.
+
+1251
+01:15:10,240 --> 01:15:12,000
+Matt Kerrigan: I'll put this to the side here.
+
+1252
+01:15:15,370 --> 01:15:15,610
+Loic Kandikandi: It.
+
+1253
+01:15:52,500 --> 01:15:53,300
+Matt Kerrigan: What's happening?
+
+1254
+01:15:53,860 --> 01:15:54,300
+Faizaan Chishtie: Okay.
+
+1255
+01:15:54,300 --> 01:15:54,900
+Faizaan Chishtie: And don't.
+
+1256
+01:15:54,900 --> 01:15:55,540
+Faizaan Chishtie: Did it work?
+
+1257
+01:15:56,100 --> 01:15:56,660
+Faizaan Chishtie: Is it.
+
+1258
+01:15:57,300 --> 01:15:59,140
+Faizaan Chishtie: Is it paused or like, what's.
+
+1259
+01:16:02,740 --> 01:16:03,140
+Loic Kandikandi: No.
+
+1260
+01:16:04,580 --> 01:16:07,150
+Faizaan Chishtie: Okay, so it's failing now we can tell.
+
+1261
+01:16:07,470 --> 01:16:14,030
+Faizaan Chishtie: So, yeah, this would be us like now going back to Claude code and just being like, hey, check that workflow.
+
+1262
+01:16:14,030 --> 01:16:14,750
+Faizaan Chishtie: It's not working.
+
+1263
+01:16:14,990 --> 01:16:15,950
+Faizaan Chishtie: Can you fix it?
+
+1264
+01:16:16,910 --> 01:16:19,110
+Faizaan Chishtie: So it would just be like, where.
+
+1265
+01:16:19,110 --> 01:16:21,630
+Matt Kerrigan: do I even see the executions?
+
+1266
+01:16:21,630 --> 01:16:23,790
+Matt Kerrigan: Like, oh, here's one.
+
+1267
+01:16:26,270 --> 01:16:29,390
+Matt Kerrigan: It says log into open dental, and it said it succeeded.
+
+1268
+01:16:30,910 --> 01:16:34,360
+Faizaan Chishtie: So yeah, if you check the video replay, which is on.
+
+1269
+01:16:35,080 --> 01:16:37,720
+Faizaan Chishtie: If you click on the output tab.
+
+1270
+01:16:40,360 --> 01:16:42,160
+Faizaan Chishtie: If you click on, like, login to open dental.
+
+1271
+01:16:42,160 --> 01:16:43,560
+Matt Kerrigan: We were like, watching the screen.
+
+1272
+01:16:43,720 --> 01:16:44,440
+Matt Kerrigan: Like, it didn't.
+
+1273
+01:16:44,440 --> 01:16:45,480
+Matt Kerrigan: Okay, the.
+
+1274
+01:16:49,800 --> 01:16:52,520
+Matt Kerrigan: Sorry, where do I find this?
+
+1275
+01:16:53,320 --> 01:16:57,080
+Faizaan Chishtie: So if you click on output on the bottom right.
+
+1276
+01:16:57,080 --> 01:17:02,320
+Faizaan Chishtie: So like, let's say login to Open Dental on the left side and then output on the right side.
+
+1277
+01:17:02,320 --> 01:17:03,400
+Matt Kerrigan: Alpha on sounds.
+
+1278
+01:17:03,400 --> 01:17:03,640
+Matt Kerrigan: Okay.
+
+1279
+01:17:03,640 --> 01:17:03,880
+Matt Kerrigan: Yeah.
+
+1280
+01:17:03,880 --> 01:17:05,120
+Faizaan Chishtie: So if you click on the play button.
+
+1281
+01:17:07,200 --> 01:17:09,520
+Matt Kerrigan: Oh, okay, interesting.
+
+1282
+01:17:10,000 --> 01:17:11,920
+Faizaan Chishtie: So here you can see, like looking at.
+
+1283
+01:17:12,880 --> 01:17:13,840
+Matt Kerrigan: Yeah, yeah.
+
+1284
+01:17:14,399 --> 01:17:15,840
+Faizaan Chishtie: So now we can probably tell.
+
+1285
+01:17:17,040 --> 01:17:17,400
+Faizaan Chishtie: Yeah.
+
+1286
+01:17:17,400 --> 01:17:20,200
+Faizaan Chishtie: Then if you refresh on the top right, you see that refresh button on the.
+
+1287
+01:17:20,200 --> 01:17:20,800
+Faizaan Chishtie: Over there.
+
+1288
+01:17:21,760 --> 01:17:22,160
+Matt Kerrigan: Y.
+
+1289
+01:17:22,960 --> 01:17:24,810
+Faizaan Chishtie: Now you can see, like, the thing failed, basically.
+
+1290
+01:17:25,450 --> 01:17:25,850
+Faizaan Chishtie: So.
+
+1291
+01:17:26,410 --> 01:17:29,370
+Matt Kerrigan: Okay, okay, interesting.
+
+1292
+01:17:31,210 --> 01:17:32,170
+Loic Kandikandi: I'm looking at.
+
+1293
+01:17:32,250 --> 01:17:33,210
+Loic Kandikandi: I'm looking at the.
+
+1294
+01:17:33,290 --> 01:17:34,010
+Loic Kandikandi: The code.
+
+1295
+01:17:34,490 --> 01:17:37,290
+Loic Kandikandi: It seems like it expected the.
+
+1296
+01:17:38,170 --> 01:17:39,530
+Loic Kandikandi: Expected the.
+
+1297
+01:17:39,530 --> 01:17:41,930
+Loic Kandikandi: The open dental Window to already be open.
+
+1298
+01:17:46,570 --> 01:17:49,450
+Matt Kerrigan: I just need to, like, have this open and that should work.
+
+1299
+01:17:49,770 --> 01:17:50,090
+Faizaan Chishtie: Yeah.
+
+1300
+01:17:50,090 --> 01:17:51,530
+Faizaan Chishtie: In the future, we can probably.
+
+1301
+01:17:52,090 --> 01:17:52,410
+Faizaan Chishtie: Or.
+
+1302
+01:17:52,410 --> 01:17:52,850
+Faizaan Chishtie: Yeah, maybe.
+
+1303
+01:17:52,850 --> 01:17:53,450
+Faizaan Chishtie: Does it start here?
+
+1304
+01:17:53,610 --> 01:17:54,330
+Faizaan Chishtie: Where does it start?
+
+1305
+01:17:56,330 --> 01:17:57,130
+Loic Kandikandi: It start with.
+
+1306
+01:17:57,290 --> 01:17:58,410
+Loic Kandikandi: This is where it starts.
+
+1307
+01:17:59,370 --> 01:18:01,450
+Loic Kandikandi: Let's try it again at the login page.
+
+1308
+01:18:07,690 --> 01:18:08,130
+Faizaan Chishtie: Okay.
+
+1309
+01:18:08,130 --> 01:18:09,370
+Faizaan Chishtie: It's starting to input stuff.
+
+1310
+01:18:19,220 --> 01:18:19,620
+Matt Kerrigan: Yeah.
+
+1311
+01:18:20,260 --> 01:18:20,580
+Matt Kerrigan: Yeah.
+
+1312
+01:18:20,580 --> 01:18:21,460
+Matt Kerrigan: I want to make the family.
+
+1313
+01:18:21,460 --> 01:18:23,860
+Matt Kerrigan: It doesn't have a patient selected yet, so it's gonna fail.
+
+1314
+01:18:23,860 --> 01:18:24,500
+Matt Kerrigan: Okay.
+
+1315
+01:18:25,060 --> 01:18:27,140
+Matt Kerrigan: Yeah, it's running, though.
+
+1316
+01:18:27,140 --> 01:18:28,180
+Matt Kerrigan: It's doing stuff.
+
+1317
+01:18:28,820 --> 01:18:29,380
+Matt Kerrigan: Okay.
+
+1318
+01:18:31,060 --> 01:18:31,860
+Loic Kandikandi: Yeah, I think.
+
+1319
+01:18:31,860 --> 01:18:32,220
+Loic Kandikandi: I think.
+
+1320
+01:18:32,220 --> 01:18:33,940
+Loic Kandikandi: Yeah, I guess.
+
+1321
+01:18:35,940 --> 01:18:36,380
+Matt Kerrigan: I'm getting.
+
+1322
+01:18:36,380 --> 01:18:37,500
+Matt Kerrigan: I'm getting a sense for it.
+
+1323
+01:18:37,500 --> 01:18:39,860
+Matt Kerrigan: Okay, this is cool.
+
+1324
+01:18:40,020 --> 01:18:44,250
+Matt Kerrigan: Still, I think that, like, y' all have some iteration to do.
+
+1325
+01:18:44,250 --> 01:18:44,890
+Matt Kerrigan: I think that.
+
+1326
+01:18:45,130 --> 01:18:46,930
+Matt Kerrigan: I think that's like, what I expect from you.
+
+1327
+01:18:46,930 --> 01:19:02,090
+Matt Kerrigan: All I think is that it's like, it's all the tools to, like, just make this go smoothly and enable this to, like, just to make this easy, you know, I think, like, navigating the.
+
+1328
+01:19:06,420 --> 01:19:12,180
+Matt Kerrigan: Anyway to, like, neatly deal with.
+
+1329
+01:19:12,180 --> 01:19:12,980
+Matt Kerrigan: Wait, what the.
+
+1330
+01:19:13,060 --> 01:19:14,900
+Matt Kerrigan: Oh, this person just doesn't have insurance.
+
+1331
+01:19:14,980 --> 01:19:15,780
+Matt Kerrigan: Oh, yeah.
+
+1332
+01:19:16,180 --> 01:19:16,740
+Matt Kerrigan: Okay.
+
+1333
+01:19:22,900 --> 01:19:23,900
+Matt Kerrigan: Well, this is whether.
+
+1334
+01:19:23,900 --> 01:19:26,380
+Matt Kerrigan: This is zooming in and screenshot, like, giving the.
+
+1335
+01:19:26,380 --> 01:19:31,780
+Matt Kerrigan: The bot different tools that it can use to, like, deal with different kinds of situations.
+
+1336
+01:19:31,860 --> 01:19:33,460
+Matt Kerrigan: I think it's like another thing like.
+
+1337
+01:19:33,590 --> 01:19:35,710
+Matt Kerrigan: Like, y' all are giving the accessibility tree.
+
+1338
+01:19:35,710 --> 01:19:37,030
+Matt Kerrigan: You're giving the screenshots.
+
+1339
+01:19:37,750 --> 01:19:45,070
+Matt Kerrigan: You know, you're enabling it with maybe some tools to, like, extract data via keyboard or whatever such that, like, it can make suggestions to me.
+
+1340
+01:19:45,070 --> 01:19:51,590
+Matt Kerrigan: It's like what it could do in a situation if there was some other way to read this information.
+
+1341
+01:19:51,590 --> 01:19:56,710
+Matt Kerrigan: Like, I feel like this has to live somewhere where we can extract it more efficiently.
+
+1342
+01:19:59,120 --> 01:19:59,400
+Matt Kerrigan: It just.
+
+1343
+01:19:59,400 --> 01:19:59,760
+Matt Kerrigan: It feel.
+
+1344
+01:19:59,760 --> 01:20:03,040
+Matt Kerrigan: It feels so wonky that, like, we're not able to, like.
+
+1345
+01:20:03,680 --> 01:20:04,240
+Matt Kerrigan: Yeah.
+
+1346
+01:20:04,960 --> 01:20:06,720
+Matt Kerrigan: My only method of copying this.
+
+1347
+01:20:06,800 --> 01:20:10,160
+Matt Kerrigan: This textual information is like the.
+
+1348
+01:20:11,440 --> 01:20:13,520
+Matt Kerrigan: I mean, in this case, I think it's screenshot.
+
+1349
+01:20:15,200 --> 01:20:15,680
+Matt Kerrigan: Like, I.
+
+1350
+01:20:15,680 --> 01:20:16,320
+Matt Kerrigan: You can't.
+
+1351
+01:20:17,200 --> 01:20:18,240
+Matt Kerrigan: Like, unless there's some.
+
+1352
+01:20:18,240 --> 01:20:22,000
+Matt Kerrigan: Like, you can't copy cell text one by one, you know, whatever.
+
+1353
+01:20:23,680 --> 01:20:27,710
+Saheed Akinbile: Some reports certain category, like, module on that city.
+
+1354
+01:20:28,830 --> 01:20:29,550
+Saheed Akinbile: Like, is there.
+
+1355
+01:20:30,030 --> 01:20:35,390
+Saheed Akinbile: Is there reporting or report generation module here sometimes?
+
+1356
+01:20:35,470 --> 01:20:37,150
+Matt Kerrigan: Yeah, like some sort of print or something.
+
+1357
+01:20:37,150 --> 01:20:39,950
+Matt Kerrigan: Yeah, like, I don't see one on here or.
+
+1358
+01:20:40,190 --> 01:20:43,710
+Loic Kandikandi: Or patient chart or like the equivalent of a patient chart.
+
+1359
+01:20:44,110 --> 01:20:44,870
+Matt Kerrigan: There's a chart.
+
+1360
+01:20:44,870 --> 01:20:46,110
+Matt Kerrigan: It's like a different tab, though.
+
+1361
+01:20:46,110 --> 01:20:46,830
+Matt Kerrigan: You know, it's.
+
+1362
+01:20:47,950 --> 01:20:52,950
+Matt Kerrigan: You know, so it's like we need to extract all, like, the insurance information, I guess.
+
+1363
+01:20:52,950 --> 01:20:54,030
+Matt Kerrigan: Like, so in this case.
+
+1364
+01:20:56,090 --> 01:20:57,330
+Matt Kerrigan: So there.
+
+1365
+01:20:57,330 --> 01:20:57,850
+Matt Kerrigan: There is.
+
+1366
+01:20:59,290 --> 01:21:01,290
+Matt Kerrigan: How do I get to the plan from here?
+
+1367
+01:21:04,890 --> 01:21:06,810
+Matt Kerrigan: I guess this Is the plan right?
+
+1368
+01:21:06,970 --> 01:21:23,830
+Matt Kerrigan: There might be another view to see some of this possibly, you know, but that feels like a workaround, you know, Like, I feel like there should be a way of, like I see restorative on the screen, I see this data on the screen with a screenshot.
+
+1369
+01:21:25,030 --> 01:21:30,870
+Matt Kerrigan: Should be able to then find like a more programmatic way of accessing that data.
+
+1370
+01:21:31,110 --> 01:21:37,350
+Matt Kerrigan: Like, this lives in memory somewhere on the machine, you know, so finding something.
+
+1371
+01:21:37,750 --> 01:21:39,350
+Matt Kerrigan: This has to be organized somewhere.
+
+1372
+01:21:39,590 --> 01:21:43,230
+Matt Kerrigan: And like, my thought is just like, I don't know, maybe that's obscene.
+
+1373
+01:21:43,230 --> 01:21:43,590
+Matt Kerrigan: But I feel.
+
+1374
+01:21:43,590 --> 01:21:48,710
+Matt Kerrigan: I feel like AI is capable and you gave the tools to like, we have the accessibility tree.
+
+1375
+01:21:48,710 --> 01:21:55,470
+Matt Kerrigan: But there might be other ways of grabbing this information because it is getting rendered somehow.
+
+1376
+01:21:55,470 --> 01:21:58,870
+Matt Kerrigan: But this is always something that's occurred to me.
+
+1377
+01:21:59,990 --> 01:22:02,470
+Matt Kerrigan: There might be another place where you can see plans.
+
+1378
+01:22:03,510 --> 01:22:07,670
+Matt Kerrigan: I'd have to remind myself where else that exists.
+
+1379
+01:22:07,910 --> 01:22:12,630
+Matt Kerrigan: Or you might be able to find another way to type in this because I think we had the patience.
+
+1380
+01:22:13,360 --> 01:22:14,400
+Matt Kerrigan: We have the plan num.
+
+1381
+01:22:14,400 --> 01:22:14,800
+Matt Kerrigan: Right.
+
+1382
+01:22:15,200 --> 01:22:17,200
+Matt Kerrigan: I'd have to look up like how.
+
+1383
+01:22:17,280 --> 01:22:18,560
+Matt Kerrigan: Where else we can see.
+
+1384
+01:22:19,600 --> 01:22:20,400
+Matt Kerrigan: I think it's like.
+
+1385
+01:22:30,640 --> 01:22:36,400
+Matt Kerrigan: Where I'm not actually 100% sure if like.
+
+1386
+01:22:42,250 --> 01:22:43,370
+Matt Kerrigan: And then you click lists.
+
+1387
+01:22:43,370 --> 01:22:44,890
+Matt Kerrigan: Okay, this is here.
+
+1388
+01:22:44,890 --> 01:22:45,850
+Matt Kerrigan: And then I can go.
+
+1389
+01:22:45,930 --> 01:22:47,290
+Matt Kerrigan: I might go, okay, from here.
+
+1390
+01:22:47,450 --> 01:22:49,490
+Matt Kerrigan: So insurance clients.
+
+1391
+01:22:49,490 --> 01:22:54,570
+Matt Kerrigan: Okay, so then I can type in like the plan number or whatever, which in this case is.
+
+1392
+01:22:55,290 --> 01:22:56,810
+Matt Kerrigan: What is the plan?
+
+1393
+01:22:58,730 --> 01:22:59,530
+Matt Kerrigan: What is the Plan?
+
+1394
+01:22:59,530 --> 01:23:01,250
+Matt Kerrigan: Plan is 3405.
+
+1395
+01:23:01,250 --> 01:23:02,970
+Matt Kerrigan: Okay, so you go here.
+
+1396
+01:23:02,970 --> 01:23:04,010
+Matt Kerrigan: I could go here.
+
+1397
+01:23:04,250 --> 01:23:09,130
+Matt Kerrigan: And then I could Type in the 3, 4, 5.
+
+1398
+01:23:09,930 --> 01:23:11,370
+Matt Kerrigan: I can go then.
+
+1399
+01:23:13,530 --> 01:23:17,290
+Faizaan Chishtie: I have to jump, but I'll leave you guys.
+

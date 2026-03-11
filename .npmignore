@@ -1,0 +1,10 @@
+src/
+*.ts
+!dist/**/*.d.ts
+tsconfig.json
+vitest.config.ts
+.github/
+workflows/
+examples/
+*.srt
+.cursor/

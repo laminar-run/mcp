@@ -1,0 +1,46 @@
+---
+description: Development conventions for the Minicor MCP server codebase
+globs: ["src/**/*.ts"]
+---
+
+## File Organization
+- `src/index.ts` is the thin orchestrator (auth, server init, main). Do NOT add tools or prompts here.
+- Tools go in `src/tools/` — each file exports `register(deps: ToolDeps)`.
+- Prompts go in `src/prompts/` — same `register(deps: ToolDeps)` pattern.
+- Shared helpers in `src/helpers.ts` (json, ok, text, safe, buildRpaProgram, error constants).
+- Session state in `src/state.ts` (LDS and browser connections).
+- Shared types in `src/types.ts` (ToolDeps interface).
+
+## Adding a New Tool
+1. Pick or create the appropriate file in `src/tools/`.
+2. Add the `server.tool()` call inside the `register()` function.
+3. Use `deps.client()` (getter function, not direct access) for the Laminar API client.
+4. Use `safe()` for simple CRUD, `ok()`/`text()` for custom responses.
+5. Add at least one test in `src/__tests__/`.
+6. Import the new module in `src/index.ts` and call its `register()` in `registerAll()`.
+
+## RPA Format Requirements
+- Desktop RPA flows MUST use `create_rpa_flow` — it auto-wraps Python in the correct JS format.
+- NEVER pass raw Python to `create_flow` with flowType RPA.
+- `buildRpaProgram()` in `helpers.ts` is the single source of truth for JS wrapper generation.
+- Two dispatch patterns: `cloudflare_tunnel` (lam.httpRequest) and `channel` (lam.rpa).
+- Browser RPA uses `create_browser_rpa_flow` for session-based browser automation.
+
+## Config Variables
+- Use `{{config.variableName}}` for sensitive data in workflow programs.
+- Common vars: `laminar_desktop_service_url`, `laminar_desktop_service_api_key`, `laminar_desktop_service_id`, `channelId`, `baseUrl`, `bearerToken`.
+
+## Testing
+- Unit tests in `src/__tests__/*.test.ts` using vitest.
+- Run: `npm test` (vitest run) or `npm run test:watch`.
+- Every new tool module needs tests for non-trivial logic.
+- Pure functions (buildRpaProgram, generateInspectScript, computeDiff) must have unit tests.
+
+## SDK Usage
+- MCP SDK: `@modelcontextprotocol/sdk` — use `McpServer` (not deprecated `Server`).
+- Transport: `StdioServerTransport` for stdio.
+- Zod: `z` from "zod" for parameter validation in tool definitions.
+
+## Naming
+- Package: `@minicor/mcp-server` (formerly `@laminar/mcp-server`).
+- API base still defaults to `api.laminar.run` — configurable via `LAMINAR_API_BASE` env var.

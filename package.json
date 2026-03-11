@@ -1,29 +1,56 @@
 {
-  "name": "@laminar/mcp-server",
-  "version": "1.1.0",
-  "description": "MCP server for Laminar - bring your Laminar workspace into Cursor and Claude Code",
+  "name": "@minicor/mcp-server",
+  "version": "2.0.0",
+  "description": "Desktop and browser RPA automation, workflow management, and AI-powered debugging for the Minicor platform. Formerly Laminar.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
+    "minicor-mcp": "dist/index.js",
+    "minicor-mcp-setup": "dist/setup.js",
+    "minicor": "dist/cli.js",
     "laminar-mcp": "dist/index.js",
     "laminar-mcp-setup": "dist/setup.js",
     "laminar": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/minicor/mcp.git"
+  },
+  "homepage": "https://minicor.com",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "setup": "node dist/setup.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepare": "npm run build"
   },
-  "keywords": ["mcp", "laminar", "cursor", "claude", "ai", "workflow", "automation"],
+  "keywords": [
+    "mcp",
+    "minicor",
+    "laminar",
+    "rpa",
+    "desktop-automation",
+    "browser-automation",
+    "workflow",
+    "cursor",
+    "claude"
+  ],
+  "mcpName": "io.github.minicor/mcp-server",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18.0.0"
