@@ -398,7 +398,7 @@ server.tool(
 
 server.tool(
   "create_flow",
-  "Create a new flow/step in a workflow. flowType: HTTP_REQUEST, GENERAL_FUNCTION, SHELL_SCRIPT, or RPA. language: js or py. For RPA flows: you MUST validate the script on the VM first (vm_execute_script + vm_screenshot) before saving it here.",
+  "Create a new flow/step in a workflow. flowType: HTTP_REQUEST, GENERAL_FUNCTION, SHELL_SCRIPT, or RPA. language: js or py. For RPA flows: prefer using create_rpa_flow instead — it auto-wraps your Python script in the correct format. If you use this tool directly for RPA, the program MUST be a JS arrow function returning lam.httpRequest or lam.rpa (NOT raw Python).",
   {
     workflowId: z.number().describe("Workflow ID"),
     name: z.string().describe("Step name"),
@@ -414,7 +414,22 @@ server.tool(
       .enum(["HTTP_REQUEST", "GENERAL_FUNCTION", "SHELL_SCRIPT", "RPA"])
       .describe("Flow type"),
   },
-  async (args) => safe(() => client.createFlow(args)),
+  async (args) => {
+    if (args.flowType === "RPA") {
+      if (args.language !== "js") {
+        return text(
+          `Error: RPA flows must use language "js", not "${args.language}". The Python script must be embedded inside a JS arrow function. Use the create_rpa_flow tool instead — it handles this automatically.`,
+        );
+      }
+      const prog = args.program.trim();
+      if (!prog.includes("lam.httpRequest") && !prog.includes("lam.rpa")) {
+        return text(
+          `Error: RPA flow program must be a JS arrow function that returns "lam.httpRequest" or "lam.rpa" with the Python script embedded. You appear to have passed raw Python. Use the create_rpa_flow tool instead — it wraps your Python script in the correct format automatically.`,
+        );
+      }
+    }
+    return safe(() => client.createFlow(args));
+  },
 );
 
 server.tool(
@@ -1142,7 +1157,7 @@ server.tool(
 
 server.tool(
   "diagnose_execution",
-  "Analyze a workflow execution to find failures. Returns failed steps with their errors, the preceding step's output (context), input data, and code.",
+  "Analyze a workflow execution to find failures. Returns failed steps with errors, preceding step output, code, and for RPA flows: specific failure pattern analysis and fix suggestions.",
   {
     workflowId: z.number().describe("Workflow ID"),
     executionId: z.number().describe("Execution ID to diagnose"),
@@ -1175,6 +1190,45 @@ server.tool(
             p.executionOrder === r.executionOrder - 1 && p.status === "SUCCESS",
         );
 
+        const errorStr = JSON.stringify(r.executionLog || r.response || "");
+        const programStr = JSON.stringify(r.program || "");
+        const isRpa = programStr.includes("lam.rpa") || programStr.includes("lam.httpRequest") || programStr.includes("pyautogui") || programStr.includes("uiautomation");
+
+        let rpaAnalysis: { pattern: string; suggestion: string } | null = null;
+        if (isRpa) {
+          if (errorStr.includes("ElementNotFound") || errorStr.includes("not found") || errorStr.includes("Exists") || errorStr.includes("WindowControl")) {
+            rpaAnalysis = {
+              pattern: "element_not_found",
+              suggestion: "The target UI element was not found. Possible causes: (1) the app hasn't fully loaded — add time.sleep() before the interaction, (2) the window title changed — use vm_inspect_ui window_list to check current titles, (3) the element's AutomationId or coordinates shifted — re-inspect with element_tree.",
+            };
+          } else if (errorStr.includes("timeout") || errorStr.includes("Timeout") || errorStr.includes("timed out")) {
+            rpaAnalysis = {
+              pattern: "timeout",
+              suggestion: "The script timed out waiting for an element or action. Increase sleep/wait times, or add a retry loop that checks for the element before acting.",
+            };
+          } else if (errorStr.includes("click") || errorStr.includes("position") || errorStr.includes("coordinate")) {
+            rpaAnalysis = {
+              pattern: "click_target_missed",
+              suggestion: "A click may have hit the wrong location. Screen resolution or window position may have changed. Use vm_inspect_ui element_at_point to verify coordinates, or switch to element-based interaction (AutomationId) instead of pixel coordinates.",
+            };
+          } else if (errorStr.includes("connection") || errorStr.includes("Connection") || errorStr.includes("ECONNREFUSED")) {
+            rpaAnalysis = {
+              pattern: "lds_connection_failed",
+              suggestion: "Could not reach the Laminar Desktop Service. Check that the Cloudflare Tunnel is still active and the LDS process is running on the VM. Try vm_status to verify connectivity.",
+            };
+          } else if (errorStr.includes("resolution") || errorStr.includes("DPI") || errorStr.includes("scale")) {
+            rpaAnalysis = {
+              pattern: "resolution_mismatch",
+              suggestion: "Script may have been built at a different screen resolution than it's running at. Use vm_inspect_ui screen_info to check current resolution, and re-record coordinates if needed.",
+            };
+          } else {
+            rpaAnalysis = {
+              pattern: "unknown_rpa_error",
+              suggestion: "Review the stderr/stdout for the root cause. Common RPA issues: wrong window focused (use vm_reset_state first), element not interactable (check IsEnabled), unexpected dialog/popup blocking the target.",
+            };
+          }
+        }
+
         return {
           stepName: r.flowName,
           executionOrder: r.executionOrder,
@@ -1189,8 +1243,11 @@ server.tool(
                 response: prevStep.response,
               }
             : null,
+          ...(rpaAnalysis && { rpaFailureAnalysis: rpaAnalysis }),
         };
       });
+
+      const baseUrl = getApiBase();
 
       return ok({
         executionId,
@@ -1200,6 +1257,7 @@ server.tool(
         failedStepCount: failures.length,
         totalSteps: flowRuns.length,
         failures: details,
+        viewInPlatform: `${baseUrl.replace("/api.", "/app.")}/workflow/${workflowId}/execution/${executionId}`,
       });
     } catch (e: any) {
       return text(`Error: ${e.message}`);
@@ -1977,7 +2035,7 @@ server.tool(
 
 server.tool(
   "vm_execute_script",
-  "Execute a Python script on the VM desktop via the Laminar Desktop Service. The script runs with full desktop access (pyautogui, uiautomation, etc.). The user will review the script before it executes. IMPORTANT: When building RPA workflows, you MUST call this to validate every script on the VM, then call vm_screenshot to verify the result, BEFORE saving the step with create_flow.",
+  "Execute a Python script on the VM desktop via the Laminar Desktop Service. The script runs with full desktop access (pyautogui, uiautomation, etc.). The user will review the script before it executes. IMPORTANT: When building RPA workflows, you MUST call this to validate every script on the VM, then call vm_screenshot to verify the result, BEFORE saving the step with create_rpa_flow.",
   {
     script: z.string().describe("Python script to execute on the VM"),
     executionId: z.string().optional().describe("Execution ID for tracking"),
@@ -2116,6 +2174,647 @@ server.tool(
 );
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  RPA FLOW BUILDERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function buildRpaProgram(
+  pythonScript: string,
+  pattern: "cloudflare_tunnel" | "channel",
+  flowId: string,
+  stepName: string,
+  stepDescription: string,
+): string {
+  const escaped = pythonScript.replace(/`/g, "\\`").replace(/\$/g, "\\$");
+  if (pattern === "channel") {
+    return `(data) => {
+  const pythonScript = \`
+${escaped}
+\`;
+  return {
+    "lam.rpa": {
+      "script": pythonScript,
+      "channelId": "{{config.channelId}}"
+    }
+  };
+}`;
+  }
+  return `(data) => {
+  const pythonScript = \`
+${escaped}
+\`;
+  return {
+    "lam.httpRequest": {
+      "method": "POST",
+      "url": "{{config.laminar_desktop_service_url}}/execute",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-API-Key": "{{config.laminar_desktop_service_api_key}}",
+        "X-Service-ID": "{{config.laminar_desktop_service_id}}"
+      },
+      "body": {
+        "flowId": "${flowId}",
+        "script": pythonScript,
+        "executionId": "1",
+        "step": { "id": "${flowId}", "name": "${stepName.replace(/"/g, '\\"')}", "description": "${stepDescription.replace(/"/g, '\\"')}", "versionId": "v1.0" }
+      }
+    }
+  };
+}`;
+}
+
+server.tool(
+  "create_rpa_flow",
+  "Create an RPA flow step from a validated Python script. Automatically wraps the script in the correct Laminar JS format (lam.httpRequest for Cloudflare Tunnel, or lam.rpa for channel). Use this instead of create_flow for RPA steps — you only provide the Python script, the tool handles the JS wrapper.",
+  {
+    workflowId: z.number().describe("Workflow ID"),
+    name: z.string().describe("Step name (e.g. 'Login to Open Dental')"),
+    description: z.string().describe("What this step does"),
+    pythonScript: z.string().describe("The validated Python RPA script (must have been tested via vm_execute_script first)"),
+    executionOrder: z.number().describe("Step position in workflow (starts at 1)"),
+    flowId: z.string().describe("Unique step identifier used in the request body (e.g. 'login-to-app')"),
+    dispatchPattern: z
+      .enum(["cloudflare_tunnel", "channel"])
+      .default("cloudflare_tunnel")
+      .describe("How to dispatch the script to the VM. Use cloudflare_tunnel (default) when a tunnel URL was provided via vm_connect, or channel when using pub/sub channelId."),
+  },
+  async ({ workflowId, name, description, pythonScript, executionOrder, flowId, dispatchPattern }) => {
+    const program = buildRpaProgram(pythonScript, dispatchPattern, flowId, name, description);
+    return safe(() =>
+      client.createFlow({
+        workflowId,
+        name,
+        description,
+        program,
+        executionOrder,
+        language: "js",
+        flowType: "RPA",
+      }),
+    );
+  },
+);
+
+// ── VM Data Extraction Tools ─────────────────────────────────
+
+server.tool(
+  "vm_read_clipboard",
+  "Read the current clipboard text content on the VM. Useful after performing a copy operation (Ctrl+C) to extract data from fields that aren't accessible via the UI tree. Combine with vm_execute_script to click a field, select all (Ctrl+A), copy (Ctrl+C), then read.",
+  {},
+  async () => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const script = `
+import json
+try:
+    import win32clipboard
+    win32clipboard.OpenClipboard()
+    try:
+        data = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+    except TypeError:
+        data = ""
+    finally:
+        win32clipboard.CloseClipboard()
+except ImportError:
+    import subprocess
+    result = subprocess.run(['powershell', '-command', 'Get-Clipboard'], capture_output=True, text=True, timeout=5)
+    data = result.stdout.strip()
+print(json.dumps({"clipboard": data}))
+`.trim();
+      const res = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { flowId: "read-clipboard" },
+        ldsAuth(),
+      );
+      if (!res.success) {
+        return text(`Clipboard read failed (exit ${res.exitCode}):\n${res.stderr || res.stdout}`);
+      }
+      try {
+        return ok(JSON.parse(res.stdout));
+      } catch {
+        return text(res.stdout);
+      }
+    } catch (e: any) {
+      return text(`Clipboard read failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "vm_screenshot_region",
+  "Capture a cropped region of the VM desktop as a screenshot. Use when the full desktop screenshot is too low resolution to read text clearly. Returns the cropped image as base64 PNG.",
+  {
+    x: z.number().describe("Left edge X coordinate of the region"),
+    y: z.number().describe("Top edge Y coordinate of the region"),
+    width: z.number().describe("Width of the region in pixels"),
+    height: z.number().describe("Height of the region in pixels"),
+  },
+  async ({ x, y, width, height }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const script = `
+import json, base64, io
+from PIL import ImageGrab
+
+img = ImageGrab.grab(bbox=(${x}, ${y}, ${x + width}, ${y + height}))
+buf = io.BytesIO()
+img.save(buf, format='PNG')
+b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+print(json.dumps({"image": b64, "width": img.width, "height": img.height}))
+`.trim();
+      const res = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { flowId: "screenshot-region" },
+        ldsAuth(),
+      );
+      if (!res.success) {
+        return text(`Region screenshot failed (exit ${res.exitCode}):\n${res.stderr || res.stdout}`);
+      }
+      try {
+        const parsed = JSON.parse(res.stdout);
+        return {
+          content: [
+            {
+              type: "image" as const,
+              data: parsed.image,
+              mimeType: "image/png" as const,
+            },
+            {
+              type: "text" as const,
+              text: json({ width: parsed.width, height: parsed.height, region: { x, y, width, height } }),
+            },
+          ],
+        };
+      } catch {
+        return text(res.stdout);
+      }
+    } catch (e: any) {
+      return text(`Region screenshot failed: ${e.message}`);
+    }
+  },
+);
+
+// ── Debug & Iteration Tools ──────────────────────────────────
+
+server.tool(
+  "debug_rpa_step",
+  "Run a Python RPA script with full before/after diagnostics. Takes a screenshot BEFORE execution, runs the script, then takes a screenshot AFTER. Returns both screenshots plus stdout/stderr/exit code. Use this during RPA development to see exactly what changed.",
+  {
+    script: z.string().describe("Python script to execute on the VM"),
+    stepName: z.string().optional().describe("Optional name for tracking"),
+  },
+  async ({ script, stepName }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      const beforeShot = await lds.screenshot(ldsConnection!.url, ldsAuth());
+      const execResult = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { flowId: stepName ? `debug-${stepName}` : "debug-step" },
+        ldsAuth(),
+      );
+      const afterShot = await lds.screenshot(ldsConnection!.url, ldsAuth());
+      return {
+        content: [
+          { type: "text" as const, text: "## Before Execution" },
+          { type: "image" as const, data: beforeShot.image, mimeType: "image/png" as const },
+          {
+            type: "text" as const,
+            text: json({
+              success: execResult.success,
+              exitCode: execResult.exitCode,
+              stdout: execResult.stdout,
+              stderr: execResult.stderr,
+              executionTimeMs: execResult.executionTimeMs,
+            }),
+          },
+          { type: "text" as const, text: "## After Execution" },
+          { type: "image" as const, data: afterShot.image, mimeType: "image/png" as const },
+        ],
+      };
+    } catch (e: any) {
+      return text(`Debug step failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "vm_reset_state",
+  "Reset the VM application to a known state (Smart Launch). Closes all dialogs/popups for the target app and optionally navigates to a specific screen. Use before running an RPA workflow to ensure a clean starting point.",
+  {
+    appName: z.string().describe("Application name or window title pattern (e.g. 'Open Dental')"),
+    action: z
+      .enum(["close_dialogs", "close_app", "minimize_all", "focus_app"])
+      .default("close_dialogs")
+      .describe("What reset action to perform"),
+  },
+  async ({ appName, action }) => {
+    const blocked = requireVM();
+    if (blocked) return blocked;
+    try {
+      let script: string;
+      if (action === "close_dialogs") {
+        script = `
+import json, time
+import uiautomation as auto
+
+app_pattern = ${JSON.stringify(appName)}
+closed = []
+root = auto.GetRootControl()
+for win in root.GetChildren():
+    try:
+        if app_pattern.lower() in (win.Name or '').lower():
+            for child in win.GetChildren():
+                try:
+                    if child.ControlTypeName in ('Window', 'Pane') and child.Name:
+                        child_rect = child.BoundingRectangle
+                        parent_rect = win.BoundingRectangle
+                        if child_rect.width() < parent_rect.width() * 0.95:
+                            import pyautogui
+                            pyautogui.press('escape')
+                            time.sleep(0.3)
+                            closed.append(child.Name)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+print(json.dumps({"action": "close_dialogs", "app": app_pattern, "closed": closed}))
+`.trim();
+      } else if (action === "close_app") {
+        script = `
+import json, subprocess
+app_pattern = ${JSON.stringify(appName)}
+result = subprocess.run(['taskkill', '/FI', f'WINDOWTITLE eq *{app_pattern}*', '/F'], capture_output=True, text=True)
+print(json.dumps({"action": "close_app", "app": app_pattern, "stdout": result.stdout.strip(), "stderr": result.stderr.strip()}))
+`.trim();
+      } else if (action === "minimize_all") {
+        script = `
+import json
+import pyautogui
+pyautogui.hotkey('win', 'd')
+import time; time.sleep(0.5)
+print(json.dumps({"action": "minimize_all"}))
+`.trim();
+      } else {
+        script = `
+import json, time
+import uiautomation as auto
+
+app_pattern = ${JSON.stringify(appName)}
+root = auto.GetRootControl()
+found = False
+for win in root.GetChildren():
+    try:
+        if app_pattern.lower() in (win.Name or '').lower():
+            win.SetActive()
+            time.sleep(0.3)
+            found = True
+            print(json.dumps({"action": "focus_app", "app": app_pattern, "window": win.Name, "found": True}))
+            break
+    except Exception:
+        pass
+if not found:
+    print(json.dumps({"action": "focus_app", "app": app_pattern, "found": False}))
+`.trim();
+      }
+
+      const res = await lds.execute(
+        ldsConnection!.url,
+        script,
+        { flowId: `reset-state-${action}` },
+        ldsAuth(),
+      );
+      if (!res.success) {
+        return text(`Reset failed (exit ${res.exitCode}):\n${res.stderr || res.stdout}`);
+      }
+      try {
+        return ok(JSON.parse(res.stdout));
+      } catch {
+        return text(res.stdout);
+      }
+    } catch (e: any) {
+      return text(`Reset failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "batch_test_rpa",
+  "Run a workflow multiple times with different inputs and collect results. Useful for testing RPA workflows against a batch of test cases. Returns a summary of pass/fail for each input.",
+  {
+    workflowId: z.number().describe("Workflow ID to test"),
+    testInputs: z.array(z.record(z.string(), z.unknown())).describe("Array of input objects to test with"),
+  },
+  async ({ workflowId, testInputs }) => {
+    const results: Array<{ index: number; input: unknown; status: string; error?: string; executionId?: number; durationMs?: number }> = [];
+    for (let i = 0; i < testInputs.length; i++) {
+      try {
+        const exec = await client.executeWorkflow(workflowId, testInputs[i]);
+        const status = exec?.status || (exec?.error ? "FAILED" : "COMPLETED");
+        results.push({
+          index: i,
+          input: testInputs[i],
+          status,
+          executionId: exec?.executionId,
+          error: exec?.error,
+        });
+      } catch (e: any) {
+        results.push({ index: i, input: testInputs[i], status: "ERROR", error: e.message });
+      }
+    }
+    const passed = results.filter(r => r.status === "COMPLETED").length;
+    const failed = results.length - passed;
+    return ok({
+      summary: { total: results.length, passed, failed },
+      results,
+    });
+  },
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  BROWSER RPA (session-based)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+interface BrowserConnection {
+  baseUrl: string;
+  bearerToken: string;
+  slackChannelId?: string;
+  sessionId?: string;
+}
+
+let browserConnection: BrowserConnection | null = null;
+
+const NOT_CONNECTED_BROWSER = `No browser RPA service connected. Call browser_connect with the service base URL and bearer token first.`;
+
+function requireBrowser() {
+  if (!browserConnection) return text(NOT_CONNECTED_BROWSER);
+  return null;
+}
+
+function requireBrowserSession() {
+  const conn = requireBrowser();
+  if (conn) return conn;
+  if (!browserConnection!.sessionId) return text("No active browser session. Call browser_create_session first.");
+  return null;
+}
+
+server.tool(
+  "browser_connect",
+  "Connect to a browser RPA service (e.g. for web-based automation). Store the service URL and auth token for subsequent browser_* calls.",
+  {
+    baseUrl: z.string().describe("Browser RPA service base URL"),
+    bearerToken: z.string().describe("Bearer token for authentication"),
+    slackChannelId: z.string().optional().describe("Optional Slack channel ID for notifications"),
+  },
+  async ({ baseUrl, bearerToken, slackChannelId }) => {
+    browserConnection = { baseUrl: baseUrl.replace(/\/+$/, ""), bearerToken, slackChannelId };
+    return ok({ connected: true, baseUrl: browserConnection.baseUrl });
+  },
+);
+
+server.tool(
+  "browser_create_session",
+  "Create a new browser session. Returns a sessionId used by all subsequent browser actions. Call browser_connect first.",
+  {},
+  async () => {
+    const blocked = requireBrowser();
+    if (blocked) return blocked;
+    try {
+      const res = await fetch(`${browserConnection!.baseUrl}/sessions`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${browserConnection!.bearerToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+          browserConnection!.slackChannelId
+            ? { slackChannelId: browserConnection!.slackChannelId }
+            : {},
+        ),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      const data = await res.json() as { sessionId: string };
+      browserConnection!.sessionId = data.sessionId;
+      return ok({ sessionId: data.sessionId });
+    } catch (e: any) {
+      return text(`Failed to create browser session: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "browser_act",
+  "Send an action to the browser session. Actions are described in natural language (e.g. 'click the login button', 'type hello@example.com into the email field', 'navigate to https://example.com').",
+  {
+    message: z.string().describe("Natural language action to perform in the browser"),
+    sessionId: z.string().optional().describe("Session ID (defaults to the current session from browser_create_session)"),
+  },
+  async ({ message, sessionId: explicitSessionId }) => {
+    const blocked = requireBrowserSession();
+    if (blocked && !explicitSessionId) return blocked!;
+    const sid = explicitSessionId || browserConnection!.sessionId!;
+    try {
+      const res = await fetch(`${browserConnection!.baseUrl}/sessions/${sid}/act`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${browserConnection!.bearerToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      return ok(await res.json());
+    } catch (e: any) {
+      return text(`Browser action failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "browser_extract",
+  "Extract data from the current browser page. Provide natural language instructions describing what data to extract (e.g. 'extract the patient name and appointment date').",
+  {
+    instructions: z.string().describe("What data to extract from the current page"),
+    sessionId: z.string().optional().describe("Session ID (defaults to the current session)"),
+  },
+  async ({ instructions, sessionId: explicitSessionId }) => {
+    const blocked = requireBrowserSession();
+    if (blocked && !explicitSessionId) return blocked!;
+    const sid = explicitSessionId || browserConnection!.sessionId!;
+    try {
+      const res = await fetch(`${browserConnection!.baseUrl}/sessions/${sid}/extract`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${browserConnection!.bearerToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ instructions }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      return ok(await res.json());
+    } catch (e: any) {
+      return text(`Browser extraction failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "browser_screenshot",
+  "Get a screenshot of the current browser page.",
+  {
+    sessionId: z.string().optional().describe("Session ID (defaults to the current session)"),
+  },
+  async ({ sessionId: explicitSessionId }) => {
+    const blocked = requireBrowserSession();
+    if (blocked && !explicitSessionId) return blocked!;
+    const sid = explicitSessionId || browserConnection!.sessionId!;
+    try {
+      const res = await fetch(`${browserConnection!.baseUrl}/sessions/${sid}/screenshot`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${browserConnection!.bearerToken}`,
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      const data = await res.json() as { image?: string; screenshot?: string };
+      const imageData = data.image || data.screenshot;
+      if (imageData) {
+        return {
+          content: [
+            { type: "image" as const, data: imageData, mimeType: "image/png" as const },
+          ],
+        };
+      }
+      return ok(data);
+    } catch (e: any) {
+      return text(`Browser screenshot failed: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "browser_close_session",
+  "Close and clean up the current browser session.",
+  {
+    sessionId: z.string().optional().describe("Session ID to close (defaults to the current session)"),
+  },
+  async ({ sessionId: explicitSessionId }) => {
+    const blocked = requireBrowser();
+    if (blocked) return blocked;
+    const sid = explicitSessionId || browserConnection?.sessionId;
+    if (!sid) return text("No session to close.");
+    try {
+      const res = await fetch(`${browserConnection!.baseUrl}/sessions/${sid}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${browserConnection!.bearerToken}`,
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      if (browserConnection && browserConnection.sessionId === sid) {
+        browserConnection.sessionId = undefined;
+      }
+      return ok({ closed: true, sessionId: sid });
+    } catch (e: any) {
+      return text(`Failed to close browser session: ${e.message}`);
+    }
+  },
+);
+
+server.tool(
+  "create_browser_rpa_flow",
+  "Create a browser RPA workflow step that wraps a browser session API call in the correct Laminar lam.httpRequest format. Use this for web-based RPA automation.",
+  {
+    workflowId: z.number().describe("Workflow ID"),
+    name: z.string().describe("Step name"),
+    description: z.string().describe("What this step does"),
+    executionOrder: z.number().describe("Step position in workflow"),
+    actionType: z.enum(["create_session", "act", "extract", "close_session"]).describe("What browser action this step performs"),
+    actionPayload: z.record(z.string(), z.unknown()).optional().describe("Payload for the action (e.g. {message: 'click login'} for act, {instructions: 'get patient name'} for extract)"),
+    sessionIdRef: z.string().optional().describe("Data reference to the session ID from a previous step (e.g. 'data.step_1.response.sessionId')"),
+  },
+  async ({ workflowId, name, description, executionOrder, actionType, actionPayload, sessionIdRef }) => {
+    let program: string;
+    const sessionRef = sessionIdRef || "data.step_1.response.sessionId";
+
+    if (actionType === "create_session") {
+      program = `(data) => {
+    return {
+        "lam.httpRequest": {
+            "method": "POST",
+            "url": "{{config.baseUrl}}/sessions",
+            "headers": {
+                "Authorization": "Bearer {{config.bearerToken}}"
+            },
+            "body": {"slackChannelId": "{{config.slackChannelId}}"}
+        }
+    };
+}`;
+    } else if (actionType === "act") {
+      const msg = (actionPayload as any)?.message || "describe the action";
+      program = `(data) => {
+    const sessionId = ${sessionRef};
+    return {
+        "lam.httpRequest": {
+            "method": "POST",
+            "url": \`{{config.baseUrl}}/sessions/\${sessionId}/act\`,
+            "headers": {
+                "Authorization": "Bearer {{config.bearerToken}}",
+                "Content-Type": "application/json"
+            },
+            "body": ${JSON.stringify(actionPayload || { message: msg }, null, 12).replace(/^/gm, "            ").trim()}
+        }
+    };
+}`;
+    } else if (actionType === "extract") {
+      const instr = (actionPayload as any)?.instructions || "extract the data";
+      program = `(data) => {
+    const sessionId = ${sessionRef};
+    return {
+        "lam.httpRequest": {
+            "method": "POST",
+            "url": \`{{config.baseUrl}}/sessions/\${sessionId}/extract\`,
+            "headers": {
+                "Authorization": "Bearer {{config.bearerToken}}",
+                "Content-Type": "application/json"
+            },
+            "body": ${JSON.stringify(actionPayload || { instructions: instr }, null, 12).replace(/^/gm, "            ").trim()}
+        }
+    };
+}`;
+    } else {
+      program = `(data) => {
+    const sessionId = ${sessionRef};
+    return {
+        "lam.httpRequest": {
+            "method": "DELETE",
+            "url": \`{{config.baseUrl}}/sessions/\${sessionId}\`,
+            "headers": {
+                "Authorization": "Bearer {{config.bearerToken}}"
+            }
+        }
+    };
+}`;
+    }
+
+    return safe(() =>
+      client.createFlow({
+        workflowId,
+        name,
+        description,
+        program,
+        executionOrder,
+        language: "js",
+        flowType: "HTTP_REQUEST",
+      }),
+    );
+  },
+);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  PROMPTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -2207,60 +2906,15 @@ Multiple requests: use \`"lam.httpRequests"\` (plural) with an array.
 \`\`\`
 
 ### RPA (Desktop Automation)
-RPA flows MUST use \`language: "js"\`. The Python script is embedded as a JS template literal string inside a JS arrow function. There are two dispatch patterns:
+**IMPORTANT: Use the \`create_rpa_flow\` tool to save RPA steps.** It accepts your validated Python script and automatically wraps it in the correct JS format. You do NOT need to construct the wrapper yourself.
 
-**Option A — \`lam.rpa\` with channelId** (when the workspace uses a persistent channel, no tunnel URL):
-\`\`\`javascript
-(data) => {
-  const pythonScript = \\\`
-# ... your validated Python RPA script ...
-\\\`;
-  return {
-    "lam.rpa": {
-      "script": pythonScript,
-      "channelId": "{{config.channelId}}"
-    }
-  };
-}
-\`\`\`
+RPA flows internally use \`language: "js"\` with the Python embedded in a JS arrow function. Two dispatch patterns exist:
+- **\`lam.httpRequest\`** (Cloudflare Tunnel — default) — sends the script to the VM via HTTP
+- **\`lam.rpa\`** (channelId) — sends via pub/sub channel
 
-**Option B — \`lam.httpRequest\` to Cloudflare Tunnel** (when a tunnel URL was provided via \`vm_connect\`):
-\`\`\`javascript
-(data) => {
-  const pythonScript = \\\`
-# ... your validated Python RPA script ...
-\\\`;
-  return {
-    "lam.httpRequest": {
-      "method": "POST",
-      "url": "{{config.laminar_desktop_service_url}}/execute",
-      "headers": {
-        "Content-Type": "application/json",
-        "X-API-Key": "{{config.laminar_desktop_service_api_key}}",
-        "X-Service-ID": "{{config.laminar_desktop_service_id}}"
-      },
-      "body": {
-        "flowId": "rpa-step-id",
-        "script": pythonScript,
-        "executionId": "1",
-        "step": {
-          "id": "step-1",
-          "name": "Step Name",
-          "description": "Step description.",
-          "versionId": "v1.0"
-        }
-      }
-    }
-  };
-}
-\`\`\`
+The \`create_rpa_flow\` tool handles both patterns via the \`dispatchPattern\` parameter (default: \`cloudflare_tunnel\`).
 
-**When to use which:**
-- If a Cloudflare Tunnel URL was provided (via \`vm_connect\`), default to Option B (\`lam.httpRequest\`).
-- If the workspace uses a channelId (no tunnel), use Option A (\`lam.rpa\`).
-- Ask the user if unclear.
-
-**NEVER** save raw Python as the program for an RPA flow. It must ALWAYS be a JavaScript arrow function returning \`lam.rpa\` or \`lam.httpRequest\`.
+**NEVER** save raw Python as the program for an RPA flow. **NEVER** manually construct the JS wrapper — use \`create_rpa_flow\`.
 
 ### Configuration Updates
 \`\`\`json
@@ -2433,124 +3087,231 @@ ${appName}
 ## Workspace
 ID: ${workspaceId}${workflowId ? `\nExisting workflow ID: ${workflowId} (add steps to this workflow)` : "\nCreate a new workflow for this automation."}
 
-## CRITICAL RULE — MANDATORY VALIDATION
+## CRITICAL RULES
 
-**NEVER save a step to the Laminar workflow without first validating it on the VM.** Every single RPA script MUST go through this exact sequence before being saved:
+### Rule 1 — MANDATORY VALIDATION
+**NEVER save a step without first validating it on the VM.** Every RPA script MUST pass this sequence:
+1. \`vm_execute_script\` — run on the VM
+2. \`vm_screenshot\` — visually confirm it worked
+3. Only then → save via \`create_rpa_flow\`
 
-1. \`vm_execute_script\` — run the script on the VM
-2. \`vm_screenshot\` — visually confirm the action produced the expected result
-3. Only if BOTH succeed → save via \`create_flow\`
+### Rule 2 — USE \`create_rpa_flow\` TO SAVE (NOT \`create_flow\`)
+When saving an RPA step, call **\`create_rpa_flow\`** — it automatically wraps your Python script in the correct Laminar JS format. You only pass the Python script; the tool handles the \`lam.httpRequest\` / \`lam.rpa\` wrapper.
 
-If validation fails, fix the script and re-run this sequence. Do NOT skip validation unless the user explicitly says to. This is non-negotiable.
+**NEVER** call \`create_flow\` with raw Python for an RPA step. **NEVER** try to construct the JS wrapper yourself.
+
+### Rule 3 — COMBINE ui_inspect + screenshots + clipboard
+Screenshots alone are unreliable for reading data (resolution issues, misreads). ALWAYS combine multiple methods. See the Data Extraction Strategy section below.
 
 ## Procedure
 
 ### 1. Connect to the VM
-If no VM is connected, ask the user for their **Cloudflare Tunnel URL** for the Laminar Desktop Service. Then call \`vm_connect\` with that URL.
+If no VM is connected, ask for the **Cloudflare Tunnel URL** and call \`vm_connect\`.
 
 ### 2. Research the Target Application
-Based on the app name "${appName}", determine which UI automation framework to use:
-- **.NET / WPF / WinForms apps** → \`uiautomation\` (default) or \`pywinauto\`
-- **Java / Swing apps** → \`jab\` (Java Access Bridge)
-- **Electron / web-based desktop apps** → \`pywinauto\` or direct keyboard/mouse with pyautogui
-- **Legacy Win32 apps** → \`uiautomation\`
+Based on "${appName}", pick the UI automation framework:
+- **.NET / WPF / WinForms** → \`uiautomation\` (default) or \`pywinauto\`
+- **Java / Swing** → \`jab\` (Java Access Bridge)
+- **Electron / web-based desktop** → \`pywinauto\` or pyautogui
+- **Legacy Win32** → \`uiautomation\`
 
-If unsure, start with \`uiautomation\` and switch if inspection fails. Ask the user if you need clarification about the app or its technology stack.
+Start with \`uiautomation\` if unsure.
 
 ### 3. Initial Survey (ALWAYS do this first)
-You MUST perform all of these before writing any automation:
-1. \`vm_screenshot\` — see the current desktop state
-2. \`vm_inspect_ui\` mode \`screen_info\` — get resolution and active window
-3. \`vm_inspect_ui\` mode \`window_list\` — see all open windows
-4. Verify the target app is running and identify its window title
+Before writing any automation:
+1. \`vm_screenshot\` — see the desktop state
+2. \`vm_inspect_ui\` mode \`screen_info\` — get resolution
+3. \`vm_inspect_ui\` mode \`window_list\` — list windows
+4. Verify the target app is running
 
-### 4. Iterative Build Loop — For EACH step of the automation:
+### 4. Iterative Build Loop — For EACH step:
 
 **a. OBSERVE — Understand the current state (REQUIRED)**
-- \`vm_screenshot\` to see what is on screen right now
-- \`vm_inspect_ui\` with \`element_tree\` on the target window to map available UI elements
-- \`vm_inspect_ui\` with \`element_at_point\` for specific elements you need to interact with
+- \`vm_screenshot\` to see the screen
+- \`vm_inspect_ui\` with \`element_tree\` to map UI elements
+- \`vm_inspect_ui\` with \`element_at_point\` for specific elements
 
-**b. WRITE — Create the RPA script**
-- Write a Python script using the appropriate framework (pyautogui for mouse/keyboard, uiautomation/pywinauto for element-based interaction)
-- Explain to the user what the script will do before executing
-- Include error handling and appropriate waits/sleeps
+**b. WRITE — Create the Python RPA script**
+- Use the appropriate framework (pyautogui for mouse/keyboard, uiautomation/pywinauto for element-based)
+- Include error handling and waits
+- Explain what it does before executing
 
-**c. VALIDATE — Test the script on the VM (REQUIRED — DO NOT SKIP)**
-- Call \`vm_execute_script\` with the script — the user reviews and approves it
-- Check stdout/stderr for errors or unexpected output
-- If the script errored (non-zero exit code or stderr), fix it and re-execute. Do NOT proceed.
+**c. VALIDATE — Test on the VM (REQUIRED)**
+- \`vm_execute_script\` — run the script
+- Or use \`debug_rpa_step\` for full before/after screenshots + diagnostics
+- Fix and re-run if errors occur
 
-**d. VERIFY — Confirm the result visually (REQUIRED — DO NOT SKIP)**
-- Call \`vm_screenshot\` immediately after execution
-- Analyze the screenshot to confirm the action succeeded (e.g. a button was clicked, a dialog opened, text was entered)
-- If the result does not match expectations, go back to step (b) and adjust
+**d. VERIFY — Confirm visually (REQUIRED)**
+- \`vm_screenshot\` immediately after
+- If result is wrong, go back to (b)
 
-**e. SAVE — Persist as a Laminar workflow step (only after c + d pass)**
-- Call \`create_flow\` with \`flowType: "RPA"\`, \`language: "js"\`, a clear name and description, and a \`program\` that is a **JavaScript arrow function** wrapping the Python script.
-- **NEVER** paste raw Python as the program. The program MUST be a JS arrow function that embeds the Python in a template literal and returns \`lam.rpa\` or \`lam.httpRequest\`.
-- Choose the dispatch pattern based on how the VM was connected:
-
-  **If a Cloudflare Tunnel URL was provided** (via \`vm_connect\`), use \`lam.httpRequest\`:
-  \`\`\`
-  (data) => {
-    const pythonScript = \\\`<the validated Python script>\\\`;
-    return {
-      "lam.httpRequest": {
-        "method": "POST",
-        "url": "{{config.laminar_desktop_service_url}}/execute",
-        "headers": {
-          "Content-Type": "application/json",
-          "X-API-Key": "{{config.laminar_desktop_service_api_key}}",
-          "X-Service-ID": "{{config.laminar_desktop_service_id}}"
-        },
-        "body": {
-          "flowId": "<step-id>",
-          "script": pythonScript,
-          "executionId": "1",
-          "step": { "id": "<step-id>", "name": "<step name>", "description": "<what it does>", "versionId": "v1.0" }
-        }
-      }
-    };
-  }
-  \`\`\`
-
-  **If a channelId is configured** (no tunnel), use \`lam.rpa\`:
-  \`\`\`
-  (data) => {
-    const pythonScript = \\\`<the validated Python script>\\\`;
-    return {
-      "lam.rpa": {
-        "script": pythonScript,
-        "channelId": "{{config.channelId}}"
-      }
-    };
-  }
-  \`\`\`
-
-- If unsure which pattern to use, ask the user.
-- Then move to the next step of the automation (back to step a)
+**e. SAVE — Call \`create_rpa_flow\` (only after c + d pass)**
+- Pass the validated Python script, step name, description, flowId, and executionOrder
+- The tool handles all JS wrapping automatically
+- Default dispatch: \`cloudflare_tunnel\` (uses \`lam.httpRequest\`)
 
 ### 5. End-to-End Validation
-Once ALL steps are built and individually validated:
-- Use \`execute_workflow\` to run all steps in sequence on the platform
-- Call \`vm_screenshot\` after to verify the final state
-- If any step fails, diagnose with \`diagnose_execution\`, fix, re-validate, and re-test
+After all steps are built:
+- \`execute_workflow\` to run the full sequence
+- \`vm_screenshot\` to verify final state
+- \`diagnose_execution\` if anything fails
 
 ### 6. Iterate with the User
-- Present the completed workflow with a summary of all steps
-- Ask for feedback and make adjustments
-- Re-validate any changed steps (mandatory — same sequence: execute → screenshot → save)
+- Present completed workflow summary
+- Make adjustments, re-validate changed steps
+
+## Data Extraction Strategy
+
+When you need to READ data from the screen (not just click/type), follow this priority order. **Do NOT rely solely on screenshots for data reading.**
+
+### Priority 1: Accessibility Tree (most reliable)
+- \`vm_inspect_ui\` with \`element_tree\` on the target window
+- If the tree exposes text values, this is the most reliable method
+- Use \`element_at_point\` for specific fields
+- Use \`focused_element\` to read the current field
+
+### Priority 2: Open Accessible Dialogs
+- Many apps expose more data when you open edit/detail dialogs
+- Double-click on a row or click "Edit" to open a modal — the modal often has better accessibility support
+- Then use \`element_tree\` on the modal
+
+### Priority 3: Clipboard Extraction
+- Use \`vm_execute_script\` to click a field, then Ctrl+A, Ctrl+C
+- Call \`vm_read_clipboard\` to get the copied text
+- Works for individual fields, text areas, and some grid cells
+
+### Priority 4: Keyboard Navigation
+- Tab through fields, reading each via \`vm_inspect_ui\` \`focused_element\`
+- Useful when the accessibility tree returns element structure but not values
+
+### Priority 5: Zoomed Screenshot
+- Use \`vm_screenshot_region\` to crop a specific area for better resolution
+- Only for small text that can't be accessed any other way
+
+### Priority 6: Alternative Application Paths
+- Think creatively! Look for:
+  - Reports or Print menus that export data
+  - List/Search views with better accessibility
+  - CLI tools or command-line interfaces the app provides
+  - Export to CSV/clipboard options
+  - Alternative windows/dialogs that show the same data more accessibly
+- Use \`vm_execute_script\` to run Python code that queries the app's data directly if a CLI or API exists
+
+### Priority 7: Full Screenshot (VERIFICATION ONLY)
+- Full desktop screenshots are for **verifying actions worked**, NOT for reading data
+- If you must use a screenshot to read data, acknowledge it's unreliable and suggest a better approach to the user
+
+## Debugging Tools
+
+- **\`debug_rpa_step\`** — runs a script with before/after screenshots and full diagnostics (stdout, stderr, exit code). Use during development.
+- **\`vm_reset_state\`** — Smart Launch: close dialogs, reset app to known state. Use before testing.
+- **\`vm_read_clipboard\`** — read clipboard after a copy operation.
+- **\`vm_screenshot_region\`** — crop/zoom a region for better text reading.
+- **\`batch_test_rpa\`** — run the workflow with multiple test inputs.
 
 ## Important Rules
-- **VALIDATE BEFORE SAVING** — this is the #1 rule. Every script must be executed on the VM and verified via screenshot before being saved as a workflow step. No exceptions unless the user explicitly opts out.
-- **All script executions require user approval** — always explain what each script does
-- **Use \`{{config.variables}}\` for sensitive data** (credentials, URLs) — never hardcode secrets
-- **Start simple** — get basic mouse/keyboard automation working before adding sophisticated element detection
-- **Add waits** — UI operations need time; use \`time.sleep()\` or element-wait patterns between actions
-- **Handle errors** — wrap interactions in try/except and provide meaningful error messages
-- **Keep scripts focused** — one logical action per step, don't combine unrelated operations
-- **Always screenshot after executing** — you need visual proof that the action worked`,
+- **VALIDATE BEFORE SAVING** — no exceptions unless user explicitly opts out
+- **Use \`create_rpa_flow\`** — never construct JS wrappers manually
+- **Use \`{{config.variables}}\` for secrets** — never hardcode credentials
+- **Combine extraction methods** — accessibility tree + clipboard + screenshots
+- **Start simple** — get basic automation working before adding sophistication
+- **Add waits** — use \`time.sleep()\` or element-wait patterns between actions
+- **Handle errors** — try/except with meaningful messages
+- **Keep scripts focused** — one logical action per step`,
+        },
+      },
+    ],
+  }),
+);
+
+server.prompt(
+  "build-browser-rpa-workflow",
+  "Iteratively build a browser-based RPA workflow using the Laminar Browser RPA service. Guides you through creating a browser session, performing actions, extracting data, and saving each step as a Laminar workflow flow.",
+  {
+    workspaceId: z.string().describe("Laminar workspace ID"),
+    task: z
+      .string()
+      .describe(
+        "Description of what to automate (e.g. 'Log into athenaHealth, navigate to patient chart, extract insurance info')",
+      ),
+    targetUrl: z
+      .string()
+      .describe("Starting URL for the web application"),
+    workflowId: z
+      .string()
+      .optional()
+      .describe("Existing workflow ID to add steps to (omit to create a new workflow)"),
+  },
+  async ({ workspaceId, task, targetUrl, workflowId }) => ({
+    messages: [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: `You are building a browser-based RPA workflow on the Laminar platform. Your goal is to automate web application interactions using the Browser RPA session API.
+
+## Task
+${task}
+
+## Target URL
+${targetUrl}
+
+## Workspace
+ID: ${workspaceId}${workflowId ? `\nExisting workflow ID: ${workflowId} (add steps to this workflow)` : "\nCreate a new workflow for this automation."}
+
+## How Browser RPA Works
+
+The Browser RPA service provides a session-based API:
+1. **Create Session** — starts a browser instance, returns a sessionId
+2. **Act** — sends natural-language actions (e.g. "click the login button", "type hello@example.com in the email field")
+3. **Extract** — extracts data from the current page via natural-language instructions
+4. **Screenshot** — captures the current browser state
+5. **Close Session** — cleans up
+
+## Procedure
+
+### 1. Connect to Browser RPA Service
+Call \`browser_connect\` with the service base URL and bearer token. Ask the user if not known.
+
+### 2. Create a Browser Session
+Call \`browser_create_session\` to get a sessionId.
+
+### 3. Iterative Build Loop — For EACH step:
+
+**a. ACT — Perform the browser action**
+- Call \`browser_act\` with a natural-language description of what to do
+- Be specific: "navigate to ${targetUrl}", "click the Submit button", "type 'john@example.com' into the email input field"
+
+**b. VERIFY — Confirm the action worked**
+- Call \`browser_screenshot\` to see the current state
+- If the action didn't produce the expected result, retry with a more specific instruction
+
+**c. EXTRACT — Get data if needed**
+- Call \`browser_extract\` with instructions like "extract the patient name and date of birth"
+- This returns structured data from the page
+
+**d. SAVE — Persist as a workflow step**
+- Call \`create_browser_rpa_flow\` with the action type and payload
+- For the first step, use actionType "create_session"
+- For navigation/interaction steps, use actionType "act"
+- For data extraction steps, use actionType "extract"
+- For cleanup, use actionType "close_session"
+
+### 4. End-to-End Validation
+- Run the full workflow via \`execute_workflow\`
+- Verify the final state
+
+### 5. Iterate with the User
+- Present the completed workflow
+- Make adjustments as needed
+
+## Important Rules
+- **Always verify actions with screenshots** before saving
+- **Use \`create_browser_rpa_flow\`** to save steps — it generates the correct \`lam.httpRequest\` wrapper
+- **Use \`{{config.variables}}\`** for credentials (bearerToken, baseUrl, etc.)
+- **Be specific in actions** — natural language should be unambiguous
+- **Handle 2FA/MFA** — if login requires verification codes, use waitForInput patterns
+- **One action per step** — keep steps focused and debuggable`,
         },
       },
     ],
