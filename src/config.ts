@@ -1,15 +1,12 @@
 /**
- * Optional service configuration for Laminar MCP.
+ * Optional service configuration for Minicor MCP.
  *
- * Priority: env vars > config file (~/.laminar/config.json)
- * Services that aren't configured just return a helpful "not configured" message.
+ * Priority: env vars > config file (~/.minicor/config.json, falls back to ~/.laminar/config.json)
  */
 
 import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
-
-export const CONFIG_PATH = path.join(os.homedir(), ".laminar", "config.json");
+import { getConfigPath, getWriteConfigPath } from "./paths.js";
 
 export interface ElasticsearchConfig {
   endpoint: string;
@@ -46,9 +43,10 @@ export function loadServiceConfig(): ServiceConfig {
   }
 
   try {
-    if (fs.existsSync(CONFIG_PATH)) {
+    const cfgPath = getConfigPath();
+    if (fs.existsSync(cfgPath)) {
       const file: ServiceConfig = JSON.parse(
-        fs.readFileSync(CONFIG_PATH, "utf-8")
+        fs.readFileSync(cfgPath, "utf-8"),
       );
       if (!config.elasticsearch && file.elasticsearch) {
         config.elasticsearch = file.elasticsearch;
@@ -63,18 +61,20 @@ export function loadServiceConfig(): ServiceConfig {
 }
 
 export function saveServiceConfig(update: ServiceConfig) {
-  const dir = path.dirname(CONFIG_PATH);
+  const writePath = getWriteConfigPath();
+  const dir = path.dirname(writePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
   let existing: ServiceConfig = {};
   try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      existing = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+    const readPath = getConfigPath();
+    if (fs.existsSync(readPath)) {
+      existing = JSON.parse(fs.readFileSync(readPath, "utf-8"));
     }
   } catch {}
 
   const merged = { ...existing, ...update };
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2) + "\n", {
+  fs.writeFileSync(writePath, JSON.stringify(merged, null, 2) + "\n", {
     mode: 0o600,
   });
 }

@@ -10,10 +10,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { loadServiceConfig } from "./config.js";
 import { LaminarClient, type LaminarAuth } from "./laminar-client.js";
+import {
+  getTokenPath,
+  getWriteTokenPath,
+  regionToApiBase,
+  apiBaseToRegion,
+  type Region,
+} from "./paths.js";
 import { CronService, ElasticsearchService } from "./services.js";
 import type { ToolDeps } from "./types.js";
 
@@ -36,7 +42,6 @@ import { register as registerBuildBrowserRpa } from "./prompts/build-browser-rpa
 
 // ─── Token management ────────────────────────────────────────
 
-const TOKEN_PATH = path.join(os.homedir(), ".laminar", "tokens.json");
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 interface StoredTokens {
@@ -44,32 +49,33 @@ interface StoredTokens {
   refresh_token: string | null;
   expires_at: number;
   api_base?: string;
+  region?: Region;
 }
 
 function readStoredTokens(): StoredTokens | null {
   try {
-    if (!fs.existsSync(TOKEN_PATH)) return null;
-    return JSON.parse(fs.readFileSync(TOKEN_PATH, "utf-8"));
+    const tokenPath = getTokenPath();
+    if (!fs.existsSync(tokenPath)) return null;
+    return JSON.parse(fs.readFileSync(tokenPath, "utf-8"));
   } catch {
     return null;
   }
 }
 
 function writeStoredTokens(tokens: StoredTokens) {
-  const dir = path.dirname(TOKEN_PATH);
+  const writePath = getWriteTokenPath();
+  const dir = path.dirname(writePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens, null, 2) + "\n", {
+  fs.writeFileSync(writePath, JSON.stringify(tokens, null, 2) + "\n", {
     mode: 0o600,
   });
 }
 
 export function getApiBase(): string {
   const stored = readStoredTokens();
-  return (
-    stored?.api_base ||
-    process.env.LAMINAR_API_BASE ||
-    "https://api.laminar.run"
-  );
+  if (stored?.region) return regionToApiBase(stored.region);
+  if (stored?.api_base) return stored.api_base;
+  return regionToApiBase("us");
 }
 
 async function refreshAccessToken(
@@ -93,6 +99,7 @@ async function refreshAccessToken(
       refresh_token: data.refresh_token || refreshToken,
       expires_at: Date.now() + data.expires_in * 1000,
       api_base: base,
+      region: apiBaseToRegion(base),
     };
   } catch {
     return null;
@@ -118,7 +125,7 @@ async function getValidToken(): Promise<string> {
   }
 
   console.error(
-    "Warning: Token expired and refresh failed. Run `npm run setup` to re-authenticate.",
+    "Warning: Token expired and refresh failed. Run `minicor-mcp-setup` to re-authenticate.",
   );
   return tokens.access_token;
 }
@@ -126,14 +133,7 @@ async function getValidToken(): Promise<string> {
 // ─── Resolve auth ────────────────────────────────────────────
 
 async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string }> {
-  const apiKey = process.env.LAMINAR_API_KEY;
-  const accessToken = process.env.LAMINAR_ACCESS_TOKEN;
   const baseUrl = getApiBase();
-
-  if (apiKey) return { auth: { type: "apiKey", token: apiKey }, baseUrl };
-  if (accessToken)
-    return { auth: { type: "bearer", token: accessToken }, baseUrl };
-
   const stored = readStoredTokens();
   if (stored) {
     const token = await getValidToken();
@@ -141,7 +141,7 @@ async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string }> {
   }
 
   console.error(
-    "No auth found. Run `npm run setup` to sign in, or set LAMINAR_API_KEY.",
+    "Not authenticated. Run `minicor-mcp-setup` to sign in or create an account.",
   );
   process.exit(1);
 }
