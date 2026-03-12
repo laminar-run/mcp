@@ -132,18 +132,13 @@ async function getValidToken(): Promise<string> {
 
 // ─── Resolve auth ────────────────────────────────────────────
 
-async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string }> {
-  const baseUrl = getApiBase();
+async function resolveAuth(): Promise<{ auth: LaminarAuth; baseUrl: string } | null> {
   const stored = readStoredTokens();
   if (stored) {
     const token = await getValidToken();
-    return { auth: { type: "bearer", token }, baseUrl };
+    return { auth: { type: "bearer", token }, baseUrl: getApiBase() };
   }
-
-  console.error(
-    "Not authenticated. Run `minicor-mcp-setup` to sign in or create an account.",
-  );
-  process.exit(1);
+  return null;
 }
 
 // ─── Server state ────────────────────────────────────────────
@@ -178,6 +173,29 @@ function scheduleTokenRefresh() {
   }, msUntilRefresh);
 }
 
+// ─── Unauthenticated mode ────────────────────────────────────
+
+function registerUnauthenticated() {
+  server.tool(
+    "setup_account",
+    "You are not signed in to Minicor. This is the only available tool until you authenticate.",
+    {},
+    async () => ({
+      content: [
+        {
+          type: "text" as const,
+          text:
+            `Not authenticated. To connect your Minicor account:\n\n` +
+            `**Option 1 (browser):** Run \`minicor-mcp-setup\` in your terminal\n` +
+            `**Option 2 (CLI):** Run \`minicor-mcp-setup --cli\` for terminal-based login\n\n` +
+            `If you installed via npm: \`npx @minicor/mcp-server-setup\`\n\n` +
+            `After signing in, restart your editor and the full toolset will be available.`,
+        },
+      ],
+    }),
+  );
+}
+
 // ─── Register all tools and prompts ──────────────────────────
 
 function registerAll() {
@@ -210,31 +228,41 @@ function registerAll() {
 // ─── Main ────────────────────────────────────────────────────
 
 async function main() {
-  const { auth, baseUrl } = await resolveAuth();
-  client = new LaminarClient(auth, baseUrl);
-  scheduleTokenRefresh();
+  const authResult = await resolveAuth();
 
-  const svcConfig = loadServiceConfig();
-
-  if (svcConfig.elasticsearch) {
-    esService = new ElasticsearchService(svcConfig.elasticsearch);
-    console.error("Elasticsearch: configured");
+  if (!authResult) {
+    console.error("No credentials found. Starting in limited mode.");
+    registerUnauthenticated();
   } else {
-    console.error("Elasticsearch: not configured (log search disabled)");
-  }
+    client = new LaminarClient(authResult.auth, authResult.baseUrl);
+    scheduleTokenRefresh();
 
-  if (svcConfig.cron) {
-    cronService = new CronService(svcConfig.cron);
-    console.error("CRON service: configured");
-  } else {
-    console.error("CRON service: not configured (scheduling disabled)");
-  }
+    const svcConfig = loadServiceConfig();
 
-  registerAll();
+    if (svcConfig.elasticsearch) {
+      esService = new ElasticsearchService(svcConfig.elasticsearch);
+      console.error("Elasticsearch: configured");
+    } else {
+      console.error("Elasticsearch: not configured (log search disabled)");
+    }
+
+    if (svcConfig.cron) {
+      cronService = new CronService(svcConfig.cron);
+      console.error("CRON service: configured");
+    } else {
+      console.error("CRON service: not configured (scheduling disabled)");
+    }
+
+    registerAll();
+  }
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Minicor MCP server running on stdio");
+  console.error(
+    authResult
+      ? "Minicor MCP server running on stdio"
+      : "Minicor MCP server running (limited mode — run minicor-mcp-setup to authenticate)",
+  );
 }
 
 main().catch((err) => {
