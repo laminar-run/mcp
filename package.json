@@ -1,10 +1,11 @@
 {
   "name": "@minicor/mcp-server",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Desktop and browser RPA automation, workflow management, and AI-powered debugging for the Minicor platform. Formerly Laminar.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
+    "mcp-server": "dist/index.js",
     "minicor-mcp": "dist/index.js",
     "minicor-mcp-setup": "dist/setup.js",
     "minicor": "dist/cli.js",

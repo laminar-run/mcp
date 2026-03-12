@@ -4,7 +4,32 @@
 
 Desktop and browser RPA automation, workflow management, and AI-powered debugging for the Minicor platform -- all from **Cursor** or **Claude Code**.
 
-## Install
+## Add to Claude Code
+
+```bash
+npm install -g @minicor/mcp-server
+minicor-mcp-setup
+claude mcp add minicor -- minicor-mcp
+```
+
+## Add to Cursor
+
+Run the setup, then add to your Cursor MCP config (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "minicor": {
+      "command": "npx",
+      "args": ["-y", "@minicor/mcp-server"]
+    }
+  }
+}
+```
+
+Or if you ran `minicor-mcp-setup`, it writes this automatically. Just restart Cursor.
+
+## Setup
 
 ```bash
 npm install -g @minicor/mcp-server
@@ -19,30 +44,7 @@ For headless environments:
 minicor-mcp-setup --cli
 ```
 
-Restart Cursor to activate.
-
-## How It Works
-
-The setup writes this to `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "minicor": {
-      "command": "node",
-      "args": ["/path/to/dist/index.js"]
-    }
-  }
-}
-```
-
 No API keys needed -- authentication is handled by your stored session token.
-
-### Claude Code
-
-```bash
-claude mcp add minicor node /absolute/path/to/mcp/dist/index.js
-```
 
 ## Features
 
